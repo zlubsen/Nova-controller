@@ -2,6 +2,9 @@ import cv2
 import serial
 import sys
 
+coordinate_correction_x = 100/355
+coordinate_correction_y = 100/266
+
 def setupSerial():
     ser = serial.Serial()
     ser.port = 'COM4'
@@ -32,8 +35,8 @@ def detectFaces(frame, faceCascade):
     return faces
 
 def writeToNova(ser, center_x, center_y):
-    ser.write(center_x)
-    ser.write(center_y)
+    ser.write(center_x * coordinate_correction_x)
+    ser.write(center_y * coordinate_correction_y)
 
 def drawDetectedFaceHighlight(frame, face):
     x, y, w, h = face
@@ -58,7 +61,7 @@ def loop(ser, video_capture, face_cascade):
             break
 
         if ser.in_waiting > 0:
-            print(ser.readline().decode("utf-8"));
+            print(ser.readline().decode("utf-8"))
 
 def main():
     ser = setupSerial()
