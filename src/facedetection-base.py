@@ -6,10 +6,16 @@ import time
 coordinate_correction_x = 100 / 177 #100/355
 coordinate_correction_y = 100 / 133 #100/266
 
+TO_NOVA_COMMAND_TEMPLATE = ">{}:{}:{}:{}:{}<"
+FROM_NOVA_ACK_TEMPLATE = "&\r\n"
+
+commands_send = 0
+commands_acked = 0
+
 def setupSerial():
     ser = serial.Serial()
     ser.port = 'COM4'
-    ser.baudrate = 9600
+    ser.baudrate = 28800 #9600
     ser.open()
     return ser
 
@@ -39,43 +45,62 @@ def detectFaces(frame, faceCascade):
     return faces
 
 def writeToNova(ser, center_x, center_y):
+    global commands_send
     x = int(center_x * coordinate_correction_x)
     y = int(center_y * coordinate_correction_y)
-    #print("send: {0}, {1}".format(x,y))
-    ser.write(x.to_bytes(1,'big'))
-    ser.write(y.to_bytes(1,'big'))
+
+    cmd = TO_NOVA_COMMAND_TEMPLATE.format(0,0,x,y,0).encode()
+    #print("[cntr] {}".format(cmd))
+    ser.write(cmd)
+    commands_send += 1
 
 def drawDetectedFaceHighlight(frame, face):
     x, y, w, h = face
     cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
+def captureAndDetectFaces(ser, video_capture, face_cascade):
+    frame = captureFrame(video_capture)
+    faces = detectFaces(frame, face_cascade)
+
+    retX = -1
+    retY = -1
+    found = False
+
+    for (x,y,w,h) in faces:
+        centerX = x + w/2;
+        centerY = y + h/2;
+
+        drawDetectedFaceHighlight(frame, (x,y,w,h))
+
+        # TODO what to do when multiple faces are detected; now only the last one is transmitted
+        found = True
+        retX = centerX
+        retY = centerY
+
+    cv2.imshow('NovaVision', frame)
+    return (found, retX, retY)
+
 def loop(ser, video_capture, face_cascade):
-    lastTime = int(round(time.time() * 1000))
     while True:
-        frame = captureFrame(video_capture)
-        faces = detectFaces(frame, face_cascade)
-
-        for (x,y,w,h) in faces:
-            centerX = x + w/2;
-            centerY = y + h/2;
-
-            drawDetectedFaceHighlight(frame, (x,y,w,h))
-
-            writeToNova(ser, centerX, centerY)
-
-        cv2.imshow('NovaVision', frame)
+        (found, x,y) = captureAndDetectFaces(ser, video_capture, face_cascade)
+        if allCommandsAcknowledged() and found:
+            writeToNova(ser, x, y)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-        if ser.in_waiting > 0:
-            print(ser.readline().decode("utf-8"))
+        checkResponses(ser)
 
-        currentTime = int(round(time.time() * 1000))
-        duration = currentTime - lastTime
-        lastTime = currentTime
-        print("loop took: {}".format(duration))
-#        time.sleep(1)
+def allCommandsAcknowledged():
+    return commands_send == commands_acked
+
+def checkResponses(ser):
+    global commands_acked
+    if ser.in_waiting > 0:
+        line = ser.readline().decode("utf-8")
+        print("[nova] {}".format(line))
+        if line == FROM_NOVA_ACK_TEMPLATE:
+            commands_acked += 1
 
 def main():
     ser = setupSerial()
