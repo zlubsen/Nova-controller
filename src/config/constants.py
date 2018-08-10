@@ -40,7 +40,7 @@ class NovaConstants(Const):
     OP_STATUS_RECEIVE_SERVO_5 = '5'         # (degree in arg1)
     OP_STATUS_RECEIVE_USS = '6'             # (distance in arg1)
     OP_STATUS_RECEIVE_JOY_LEFT = '7'        # (x, y, pushed in arg1, arg2, arg3)
-    OP_STATUS_RECEIVE_JOY_LEFT = '8'        # (x, y, pushed in arg1, arg2, arg3)
+    OP_STATUS_RECEIVE_JOY_RIGHT = '8'        # (x, y, pushed in arg1, arg2, arg3)
     OP_STATUS_SEND_SET_MODE = '9'           # (set new modulecode as arg1)
 
     OP_DISTANCE_SET_MIN_DIST = '1'          # (new minimum distance in arg1)
