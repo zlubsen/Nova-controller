@@ -24,6 +24,9 @@ class NovaConstants(Const):
     SERIAL_PORT_MACOS = '' # TODO set correct port for macos
     SERIAL_PORT_LINUX = '' # TODO set correct port for Linux
 
+    COMPCOMM_STATUS_SOCKET = 8888
+    COMPCOMM_COMMAND_SOCKET = 8889
+
     # module codes
     MOD_STATUS_NOVA = '0'
     MOD_JOYSTICK_CONTROL_ABOLUTE = '1'

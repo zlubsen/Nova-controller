@@ -3,7 +3,7 @@ import sys
 from collections import deque
 from config.constants import NovaConstants
 
-class Communication:
+class SerialCommunication:
     def __init__(self):
         self.ser = serial.Serial()
         self.ser.port = self.__determinSerialPort() # TODO only work on windows for now

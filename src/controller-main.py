@@ -1,9 +1,9 @@
 import cv2
-from communication.communication import Communication
+from communication.serial_communication import SerialCommunication
 from controlloop.facedetection import FaceDetectionControlLoop
 
 def setupCommunication():
-    return Communication()
+    return SerialCommunication()
 
 def setupControlLoops():
     loops = []
