@@ -2,12 +2,10 @@ import cv2
 from config.constants import NovaConstants
 
 class FaceDetectionControlLoop:
-    FROM_NOVA_ACK_TEMPLATE = "&\r\n"
-
-    def __init__(self, communication):
+    def __init__(self, serial_communication):
         self.commands_send = 0
         self.commands_acked = 0
-        self.comm = communication
+        self.serial_comm = serial_communication
         self.video_capture = self.__setupVideoOutput()
         self.face_cascade = self.__setupFaceRecognition()
 
@@ -73,7 +71,7 @@ class FaceDetectionControlLoop:
         opcode = NovaConstants.OP_FACE_DETECTION_SET_COORDINATES
         args = [x, y, 0]
 
-        self.comm.writeCommand(modcode, opcode, args)
+        self.serial_comm.writeCommand(modcode, opcode, args)
         self.commands_send += 1
 
     def __processResponses(self, cmds):
@@ -82,6 +80,8 @@ class FaceDetectionControlLoop:
             if modcode is NovaConstants.MOD_FACE_DETECTION and opcode is NovaConstants.OP_FACE_DETECTION_ACK_COORDINATES:
                 self.commands_acked += 1
                 cmds.remove(cmd)
+                #ackbalance = self.__allCommandsAcknowledged()
+                #print(f"Received ACK: {ackbalance}")
 
     def run(self, cmds):
         self.__processResponses(cmds)
@@ -93,4 +93,3 @@ class FaceDetectionControlLoop:
     def cleanup(self, ):
         self.video_capture.release()
         cv2.destroyAllWindows()
-        self.comm.close()

@@ -2,12 +2,13 @@ import serial
 import sys
 from collections import deque
 from config.constants import NovaConstants
+from config.config import NovaConfig
 
 class SerialCommunication:
     def __init__(self):
         self.ser = serial.Serial()
-        self.ser.port = self.__determinSerialPort() # TODO only work on windows for now
-        self.ser.baudrate = NovaConstants.SERIAL_BAUDRATE
+        self.ser.port = self.__determineSerialPort() # TODO only work on windows for now
+        self.ser.baudrate = NovaConfig.SERIAL_BAUDRATE
         self.ser.open()
 
         # for receiving data
@@ -33,7 +34,7 @@ class SerialCommunication:
         cmd_content = [modcode, opcode] + args
         command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
         self.ser.write(command.encode())
-        print("[cntr] " + command)
+        self.__printOutgoingCommand(command)
 
     def __recvBytesWithStartEndMarkers(self):
         while(self.ser.in_waiting > 0 and not self.newData):
@@ -54,15 +55,18 @@ class SerialCommunication:
             self.receivedCommands.append(tuple(cmdFields))
             self.newData = False
             self.receivedBytes.clear()
-            self.__printReceivedCommand(tuple(cmdFields))
+            self.__printIncomingCommand(tuple(cmdFields))
 
-    def __printReceivedCommand(self, command):
+    def __printIncomingCommand(self, command):
         print("[nova] " + ':'.join(command))
 
-    def __determinSerialPort(self):
+    def __printOutgoingCommand(self, command):
+        print("[cntr] " + command)
+
+    def __determineSerialPort(self):
         if sys.platform.startswith('win32'):
-            return NovaConstants.SERIAL_PORT_WINDOWS
+            return NovaConfig.SERIAL_PORT_WINDOWS
         elif sys.platform.startswith('darwin'):
-            return NovaConstants.SERIAL_PORT_MACOS
+            return NovaConfig.SERIAL_PORT_MACOS
         elif sys.platform.startswith('linux'):
-            return NovaConstants.SERIAL_PORT_LINUX
+            return NovaConfig.SERIAL_PORT_LINUX
