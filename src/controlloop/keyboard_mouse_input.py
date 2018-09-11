@@ -97,16 +97,55 @@ class KeyboardMouseInputLoop:
             self.mouse_move_on = False
         if event == cv.EVENT_MOUSEWHEEL:
             self.__calculateMouseWheelMove(flags)
-        elif event == cv.EVENT_MOUSEMOVE and self.mouse_move_on:
+        elif self.mouse_move_on and event == cv.EVENT_MOUSEMOVE:
             self.__calculateMouseMove(x,y,flags)
+            self.prev_x = x
+            self.prev_y = y
 
     def __calculateMouseMove(self, x, y, flags):
-        print(f"mouse move: {x}, {y}, {flags}")
-        #self.prev_x = x
-        #self.prev_y = y
+        mode = self.__determineMouseMode(flags)
+        direction_x = self.__determineMouseDirection(x, self.prev_x)
+        direction_y = self.__determineMouseDirection(y, self.prev_y)
+
+        # TODO set degrees depending on the delta of X or Y axis
+        if not direction_x == '':
+            self.__createCommandFromMouseMove(mode, 'X', direction_x, NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES)
+
+        if not direction_y == '':
+            self.__createCommandFromMouseMove(mode, 'Y', direction_y, NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES)
+
+    def __determineMouseMode(self, flags):
+        mode = ''
+        if flags & cv.EVENT_FLAG_LBUTTON:
+            mode = 'LBUTTON'
+        elif flags & cv.EVENT_FLAG_RBUTTON:
+            mode = 'RBUTTON'
+        return mode
+
+    def __determineMouseDirection(self, current, previous):
+        direction = ''
+        if current < previous:
+            direction = 'MINUS'
+        elif current > previous:
+            direction = 'PLUS'
+        return direction
+
+    def __createCommandFromMouseMove(self, mode, axis, direction, degrees):
+        parts = ['MOUSE', mode, axis, direction]
+        mouse_event = '_'.join(parts)
+        move = self.mouse_index[mouse_event]
+        cmd = (CommandType.INPUT, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], degrees)
+        self.move_commands.append(cmd)
 
     def __calculateMouseWheelMove(self, flags):
-        print(f"mouse wheel: {flags}")
+        if flags < 0:
+            direction = 'PLUS'
+        else:
+            direction = 'MINUS'
+
+        move = self.mouse_index['MOUSE_SCROLL_' + direction]
+        cmd = (CommandType.INPUT, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], degrees)
+        self.move_commands.append(cmd)
 
     def run(self):
         self.__readKeyInput()
