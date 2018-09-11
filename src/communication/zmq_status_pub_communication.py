@@ -1,6 +1,7 @@
 import zmq
 from config.constants import NovaConstants
 from utils.frequencytimer import FrequencyTimer
+from utils.commandtype_enum import CommandType
 
 class StatusPubCommunication:
     # index ids must match the codes in the Nova-platform constants
@@ -31,10 +32,11 @@ class StatusPubCommunication:
 
     def __processStatusUpdates(self, cmds):
         for cmd in cmds:
-            (modcode, opcode, arg1, arg2, arg3) = cmd
-            if modcode is NovaConstants.MOD_STATUS_NOVA:
-                self.__updateStatus(StatusPubCommunication.assetDict[opcode],(arg1,arg2,arg3))
-                cmds.remove(cmd)
+            if cmd[0] == CommandType.NOVA:
+                (type, modcode, opcode, arg1, arg2, arg3) = cmd
+                if modcode is NovaConstants.MOD_STATUS_NOVA:
+                    self.__updateStatus(StatusPubCommunication.assetDict[opcode],(arg1,arg2,arg3))
+                    cmds.remove(cmd)
 
     def __updateStatus(self, asset, status):
         self.assetStatus[asset] = status
@@ -48,6 +50,6 @@ class StatusPubCommunication:
         if self.timer.frequencyElapsed():
             self.__publishStatuses()
 
-    def __cleanup(self):
+    def cleanup(self):
         self.socket.close()
         self.context.term()

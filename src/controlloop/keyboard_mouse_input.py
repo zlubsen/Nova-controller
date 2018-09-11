@@ -1,7 +1,10 @@
-import cv2
+import cv2 as cv
 from collections import deque
 from enum import Enum
 from config.constants import NovaConstants
+from config.config import NovaConfig
+from utils.commandtype_enum import CommandType
+from utils.frequencytimer import FrequencyTimer
 
 class NovaMove(Enum):
     QUIT_CONTROLLER = 1
@@ -19,47 +22,48 @@ class NovaMove(Enum):
 class KeyboardMouseInputLoop:
     # dict that maps defined actions by id to (key_pressed, int_id, description, action) tuples
     actionDict = {
-        NovaMove.QUIT_CONTROLLER : ('q', 'NONE', 0, "Quit the controller", lambda: __processControllerOperationCommand('QUIT_CONTROLLER')),
+        NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processControllerOperationCommand(NovaMove.QUIT_CONTROLLER)),
 
-        NovaMove.HEAD_MOVE_FRONT : ('e', 'MOUSE_SCROLL_PLUS', 0, "Head movement - forwards", lambda: __processMoveCommand('HEAD_MOVE_FRONT')),
-        NovaMove.HEAD_MOVE_BACK : ('d', 'MOUSE_SCROLL_MINUS', 0, "Head movement - backwards", lambda: __processMoveCommand('HEAD_MOVE_BACK')),
-        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_LBUTTON_Y_PLUS', 0, "Body movement - up", lambda: __processMoveCommand('HEAD_MOVE_UP')),
-        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_LBUTTON_Y_MINUS', 0, "Body movement - down", lambda: __processMoveCommand('HEAD_MOVE_DOWN')),
+        NovaMove.HEAD_MOVE_FRONT : ('e', 'MOUSE_SCROLL_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_FRONT, "Head movement - forwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_FRONT)),
+        NovaMove.HEAD_MOVE_BACK : ('d', 'MOUSE_SCROLL_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_BACK, "Head movement - backwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_BACK)),
+        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_LBUTTON_Y_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_UP, "Body movement - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_UP)),
+        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_LBUTTON_Y_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_DOWN, "Body movement - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_DOWN)),
 
-        NovaMove.BODY_MOVE_RIGHT : ('s', 'MOUSE_LBUTTON_X_MINUS', 0, "Body movement - right", lambda: __processMoveCommand('BODY_MOVE_RIGHT')),
-        NovaMove.BODY_MOVE_LEFT : ('f', 'MOUSE_LBUTTON_X_PLUS', 0, "Body movement - left", lambda: __processMoveCommand('BODY_MOVE_LEFT')),
+        NovaMove.BODY_MOVE_RIGHT : ('f', 'MOUSE_LBUTTON_X_MINUS', NovaConstants.OP_EXTERNAL_INPUT_BODY_MOVE_RIGHT, "Body movement - right", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_RIGHT)),
+        NovaMove.BODY_MOVE_LEFT : ('s', 'MOUSE_LBUTTON_X_PLUS', NovaConstants.OP_EXTERNAL_INPUT_BODY_MOVE_LEFT, "Body movement - left", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_LEFT)),
 
-        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_RBUTTON_Y_PLUS', 0, "Head rotation - up", lambda: __processMoveCommand('HEAD_ROTATE_UP')),
-        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_RBUTTON_Y_MINUS', 0, "Head rotation - down", lambda: __processMoveCommand('HEAD_ROTATE_DOWN')),
-        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_RBUTTON_X_PLUS', 0, "Head rotation - left", lambda: __processMoveCommand('HEAD_ROTATE_LEFT')),
-        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', 0, "Head rotation - right", lambda: __processMoveCommand('HEAD_ROTATE_RIGHT')),
+        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_RBUTTON_Y_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_UP, "Head rotation - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_UP)),
+        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_RBUTTON_Y_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_DOWN, "Head rotation - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_DOWN)),
+        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_RBUTTON_X_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFT, "Head rotation - left", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_LEFT)),
+        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_RIGHT, "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT))
     }
 
     ACTION_KEY_INDEX = 0
     ACTION_MOUSE_INDEX = 1
-    ACTION_INT_ID_INDEX = 2
+    ACTION_OPERATION_ID_INDEX = 2
     ACTION_DESCRIPTION_INDEX = 3
-    ACTION_ACTION_INDEX = 4
+    ACTION_LAMBDA_INDEX = 4
 
     def __init__(self, serial_communication):
         self.serial_comm = serial_communication
-        key_index, mouse_index = self.__buildInputIndex()
+        key_index, mouse_index = self.__buildInputIndexes()
         self.key_index = key_index
         self.mouse_index = mouse_index
 
         self.running = True
         self.move_commands = deque()
 
-        cv2.setMouseCallback(NovaConstants.FACE_DETECTION_WINDOW_NAME, self.__onMouse)
-        self.primaryMoveAxes = True
+        self.mouse_move_on = False
+        cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
+        self.mouse_timer = FrequencyTimer(NovaConfig.EXTERNAL_INPUT_MOUSE_FREQUENCY_MS)
 
     # build and index of possible keys, dict key as ord('x') so we can search based on the pressed key
-    def __buildInputIndex(self):
+    def __buildInputIndexes(self):
         key_index = {}
         mouse_index = {}
 
         for id, tuple in self.actionDict.items():
-            (key, mouse, int_id, desc, action) = tuple
+            (key, mouse, op_id, desc, action) = tuple
             key_index[ord(key)] = id
             mouse_index[mouse] = id
 
@@ -69,41 +73,49 @@ class KeyboardMouseInputLoop:
         mouse_index = {}
 
     def __readKeyInput(self):
-        key_pressed = (cv2.waitKey(1) & 0xFF)
-        if key_pressed in key_index:
+        key_pressed = (cv.waitKey(1) & 0xFF)
+        if key_pressed in self.key_index:
             operation = self.key_index[key_pressed]
-            self.actionDict[operation][self.ACTION_ACTION_INDEX]()
+            self.actionDict[operation][self.ACTION_LAMBDA_INDEX](self)
 
     def __processControllerOperationCommand(self, operation):
         if operation == NovaMove.QUIT_CONTROLLER:
             self.running = False
+            print("[cntr] Closing Nova controller... Bye")
 
     def __processMoveCommand(self, move):
-        cmd = (CommandType.INPUT, actionDict[move][self.ACTION_INT_ID_INDEX])
-        self.move_commands.append(move)
+        cmd = (CommandType.INPUT, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES)
+        self.move_commands.append(cmd)
 
     def __onMouse(self, event, x, y, flags, param):
-        if event == cv.EVENT_RBUTTONDOWN:
-            self.primaryMoveAxes = False
+        #if self.mouse_timer.frequencyElapsed():
+        if event == cv.EVENT_RBUTTONDOWN or event == cv.EVENT_LBUTTONDOWN:
+            self.prev_x = x
+            self.prev_y = y
+            self.mouse_move_on = True
+        elif event == cv.EVENT_RBUTTONUP or event == cv.EVENT_LBUTTONUP:
+            self.mouse_move_on = False
+        if event == cv.EVENT_MOUSEWHEEL:
+            self.__calculateMouseWheelMove(flags)
+        elif event == cv.EVENT_MOUSEMOVE and self.mouse_move_on:
+            self.__calculateMouseMove(x,y,flags)
 
-        elif event == cv.EVENT_RBUTTONUP:
-            self.primaryMoveAxes = True
+    def __calculateMouseMove(self, x, y, flags):
+        print(f"mouse move: {x}, {y}, {flags}")
+        #self.prev_x = x
+        #self.prev_y = y
 
-        elif event == cv.EVENT_MOUSEWHEEL:
-            pass
-        elif event == cv.EVENT_MOUSEMOVE:
-            pass
+    def __calculateMouseWheelMove(self, flags):
+        print(f"mouse wheel: {flags}")
 
-
-    def run(self, cmds):
+    def run(self):
         self.__readKeyInput()
-        self.__readMouseInput()
 
     def isRunning(self):
         return self.running
 
-    def commandAvailable():
+    def commandAvailable(self):
         return len(self.move_commands) > 0
 
-    def getMoveCommand():
+    def readCommand(self):
         return self.move_commands.popleft()

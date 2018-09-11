@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 from communication.serial_communication import SerialCommunication
 from communication.zmq_status_pub_communication import StatusPubCommunication
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
@@ -11,7 +11,7 @@ def setupInputLoops():
     global keyboard_mouse_input
 
     serial_comm = SerialCommunication()
-    keyboard_mouse_input = KeyboardMouseInputLoop()
+    keyboard_mouse_input = KeyboardMouseInputLoop(serial_comm)
 
     loops = []
     loops.append(serial_comm)
@@ -21,9 +21,12 @@ def setupInputLoops():
 def setupControlLoops():
     loops = []
     loops.append(KeyboardMouseControlLoop(serial_comm))
-    loops.append(FaceDetectionControlLoop(serial_comm))
+    #loops.append(FaceDetectionControlLoop(serial_comm))
     loops.append(StatusPubCommunication(NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
+
+def setupWindow():
+    cv.namedWindow(NovaConfig.NOVA_WINDOW_NAME, cv.WINDOW_AUTOSIZE)
 
 def loop():
     cmds = []
@@ -40,20 +43,22 @@ def main():
     global input_loops
     global control_loops
 
+    setupWindow()
     input_loops = setupInputLoops()
     control_loops = setupControlLoops()
 
-    while keyboard_mouse_input.isRunning():
+    while keepRunning():
         loop()
 
-        #if (cv2.waitKey(1) & 0xFF) == ord('q'):
-            #break
-            # check the keymouseinput loop for the status of the isRunning() in the while condition
+def keepRunning():
+    return keyboard_mouse_input.isRunning() # add different kill signal sources if needed
 
 def cleanup():
-    serial_comm.close()
     for control_loop in control_loops:
         control_loop.cleanup()
+
+    serial_comm.close()
+    cv.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

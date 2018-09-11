@@ -4,13 +4,15 @@ from collections import deque
 from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
+from utils.frequencytimer import FrequencyTimer
 
 class SerialCommunication:
     def __init__(self):
+        self.connection_timer = FrequencyTimer(NovaConfig.SERIAL_RECONNECT_MS)
         self.ser = serial.Serial()
         self.ser.port = self.__determineSerialPort() # TODO only work on windows for now
         self.ser.baudrate = NovaConfig.SERIAL_BAUDRATE
-        self.ser.open()
+        self.__open()
 
         # for receiving data
         self.recvInProgress = False
@@ -18,12 +20,23 @@ class SerialCommunication:
         self.receivedBytes = []
         self.receivedCommands = deque()
 
+    def __open(self):
+        try:
+            self.ser.open()
+            self.connected = True
+        except serial.serialutil.SerialException:
+            self.connected = False
+            print("[cntr] Failed to open serial connection to Nova")
+
     def close(self):
         self.ser.close()
 
     def run(self):
-        self.__recvBytesWithStartEndMarkers()
-        self.__parseInput()
+        if self.connected:
+            self.__recvBytesWithStartEndMarkers()
+            self.__parseInput()
+        elif self.connection_timer.frequencyElapsed():
+            self.__open()
 
     def commandAvailable(self):
         return len(self.receivedCommands) > 0
@@ -32,13 +45,14 @@ class SerialCommunication:
         return self.receivedCommands.popleft()
 
     def writeCommand(self, modcode, opcode, args):
-        cmd_content = [modcode, opcode] + args
-        command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
-        self.ser.write(command.encode())
-        self.__printOutgoingCommand(command)
+        if self.connected:
+            cmd_content = [modcode, opcode] + args
+            command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
+            self.ser.write(command.encode())
+            self.__printOutgoingCommand(command)
 
     def __recvBytesWithStartEndMarkers(self):
-        while(self.ser.in_waiting > 0 and not self.newData):
+        while(self.connected and self.ser.in_waiting > 0 and not self.newData):
             receivedByte = self.ser.read()
 
             if self.recvInProgress:

@@ -19,19 +19,11 @@ class NovaConstants(Const):
     CMD_SEPARATOR = ':'
     CMD_TEMPLATE = CMD_START_MARKER + "{}:{}:{}:{}:{}" + CMD_END_MARKER
 
-    SERIAL_BAUDRATE = 28800
-    SERIAL_PORT_WINDOWS = 'COM4'
-    SERIAL_PORT_MACOS = '' # TODO set correct port for macos
-    SERIAL_PORT_LINUX = '' # TODO set correct port for Linux
-
-    COMPCOMM_STATUS_SOCKET = 8888
-    COMPCOMM_COMMAND_SOCKET = 8889
-
     # module codes
     MOD_STATUS_NOVA = '0'
     MOD_JOYSTICK_CONTROL_ABOLUTE = '1'
     MOD_JOYSTICK_CONTROL_RELATIVE = '2'
-    MOD_KEYBOARD_MOUSE_CONTROL = '3'
+    MOD_EXTERNAL_INPUT_CONTROL = '3'
     MOD_DISTANCE_AVOIDANCE = '4'
     MOD_FACE_DETECTION = '5'
 
@@ -43,7 +35,7 @@ class NovaConstants(Const):
     OP_STATUS_RECEIVE_SERVO_5 = '5'         # (degree in arg1)
     OP_STATUS_RECEIVE_USS = '6'             # (distance in arg1)
     OP_STATUS_RECEIVE_JOY_LEFT = '7'        # (x, y, pushed in arg1, arg2, arg3)
-    OP_STATUS_RECEIVE_JOY_RIGHT = '8'        # (x, y, pushed in arg1, arg2, arg3)
+    OP_STATUS_RECEIVE_JOY_RIGHT = '8'       # (x, y, pushed in arg1, arg2, arg3)
     OP_STATUS_SEND_SET_MODE = '9'           # (set new modulecode as arg1)
 
     OP_DISTANCE_SET_MIN_DIST = '1'          # (new minimum distance in arg1)
@@ -58,12 +50,13 @@ class NovaConstants(Const):
     OP_FACE_DETECTION_SET_COORDINATES = '5' # (x, y) in arg1, arg2)
     OP_FACE_DETECTION_ACK_COORDINATES = '6' # ack for received coordinates
 
-    # module specific constants
-    FACE_DETECTION_WINDOW_NAME = 'NovaVision'
-    FACE_DETECTION_FACE_CASCADE_PATH = "../data/haarcascades/haarcascade_frontalface_default.xml"
-    FACE_DETECTION_CAPTURE_SIZE_X = 320
-    FACE_DETECTION_CAPTURE_SIZE_Y = 240
-    FACE_DETECTION_COORDINATE_CORRECTION_X = 100 / 177 # 320x240 to 180x180
-    FACE_DETECTION_COORDINATE_CORRECTION_Y = 100 / 133 # 320x240 to 180x180
-    #FACE_DETECTION_COORDINATE_CORRECTION_X = 100 / 355 # 640x480 to 180x180
-    #FACE_DETECTION_COORDINATE_CORRECTION_Y = 100 / 266 # 640x480 to 180x180
+    OP_EXTERNAL_INPUT_HEAD_MOVE_FRONT = '0' # (# steps/degrees in arg1)
+    OP_EXTERNAL_INPUT_HEAD_MOVE_BACK = '1'  # etc
+    OP_EXTERNAL_INPUT_HEAD_MOVE_UP = '2'
+    OP_EXTERNAL_INPUT_HEAD_MOVE_DOWN = '3'
+    OP_EXTERNAL_INPUT_BODY_MOVE_RIGHT = '4'
+    OP_EXTERNAL_INPUT_BODY_MOVE_LEFT = '5'
+    OP_EXTERNAL_INPUT_HEAD_ROTATE_UP = '6'
+    OP_EXTERNAL_INPUT_HEAD_ROTATE_DOWN = '7'
+    OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFT = '8'
+    OP_EXTERNAL_INPUT_HEAD_ROTATE_RIGHT = '9'

@@ -1,5 +1,6 @@
-import cv2
+import cv2 as cv
 from config.constants import NovaConstants
+from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 
 class FaceDetectionControlLoop:
@@ -11,12 +12,12 @@ class FaceDetectionControlLoop:
         self.face_cascade = self.__setupFaceRecognition()
 
     def __setupFaceRecognition(self):
-        return cv2.CascadeClassifier(NovaConstants.FACE_DETECTION_FACE_CASCADE_PATH)
+        return cv.CascadeClassifier(NovaConfig.FACE_DETECTION_FACE_CASCADE_PATH)
 
     def __setupVideoOutput(self):
-        cap = cv2.VideoCapture(0) # capture from default camera
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH,NovaConstants.FACE_DETECTION_CAPTURE_SIZE_X)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT,NovaConstants.FACE_DETECTION_CAPTURE_SIZE_Y)
+        cap = cv.VideoCapture(0) # capture from default camera
+        cap.set(cv.CAP_PROP_FRAME_WIDTH,NovaConfig.FACE_DETECTION_CAPTURE_SIZE_X)
+        cap.set(cv.CAP_PROP_FRAME_HEIGHT,NovaConfig.FACE_DETECTION_CAPTURE_SIZE_Y)
         return cap
 
     def __captureFrame(self, video):
@@ -24,23 +25,25 @@ class FaceDetectionControlLoop:
         return frame
 
     def __detectFaces(self, frame, faceCascade):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
         faces = faceCascade.detectMultiScale(
             gray,
             scaleFactor=1.1,
             minNeighbors=5,
             minSize=(30, 30),
-            flags=cv2.CASCADE_SCALE_IMAGE
+            flags=cv.CASCADE_SCALE_IMAGE
         )
         return faces
 
     def __drawDetectedFaceHighlight(self, frame, face):
         x, y, w, h = face
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
     def __captureAndDetectFaces(self):
+        print(self.video_capture)
         frame = self.__captureFrame(self.video_capture)
+        print(frame)
         faces = self.__detectFaces(frame, self.face_cascade)
 
         retX = -1
@@ -58,15 +61,15 @@ class FaceDetectionControlLoop:
             retX = centerX
             retY = centerY
 
-        cv2.imshow(NovaConstants.FACE_DETECTION_WINDOW_NAME, frame)
+        cv.imshow(NovaConfig.NOVA_WINDOW_NAME, frame)
         return (found, retX, retY)
 
     def __allCommandsAcknowledged(self):
         return self.commands_send is self.commands_acked
 
     def __writeCoordinates(self, center_x, center_y):
-        x = int(center_x * NovaConstants.FACE_DETECTION_COORDINATE_CORRECTION_X)
-        y = int(center_y * NovaConstants.FACE_DETECTION_COORDINATE_CORRECTION_Y)
+        x = int(center_x * NovaConfig.FACE_DETECTION_COORDINATE_CORRECTION_X)
+        y = int(center_y * NovaConfig.FACE_DETECTION_COORDINATE_CORRECTION_Y)
 
         modcode = NovaConstants.MOD_FACE_DETECTION
         opcode = NovaConstants.OP_FACE_DETECTION_SET_COORDINATES
@@ -92,4 +95,4 @@ class FaceDetectionControlLoop:
 
     def cleanup(self, ):
         self.video_capture.release()
-        cv2.destroyAllWindows()
+        cv.destroyAllWindows()
