@@ -3,6 +3,7 @@ import sys
 from collections import deque
 from config.constants import NovaConstants
 from config.config import NovaConfig
+from utils.commandtype_enum import CommandType
 
 class SerialCommunication:
     def __init__(self):
@@ -52,10 +53,11 @@ class SerialCommunication:
     def __parseInput(self):
         if self.newData:
             cmdFields = ''.join([byte.decode() for byte in self.receivedBytes]).split(NovaConstants.CMD_SEPARATOR)
-            self.receivedCommands.append(tuple(cmdFields))
+            cmd = [CommandType.NOVA].extend(cmdFields)
+            self.receivedCommands.append(tuple(cmd))
             self.newData = False
             self.receivedBytes.clear()
-            self.__printIncomingCommand(tuple(cmdFields))
+            self.__printIncomingCommand(tuple(cmd))
 
     def __printIncomingCommand(self, command):
         print("[nova] " + ':'.join(command))

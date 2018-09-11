@@ -1,5 +1,6 @@
 import cv2
 from config.constants import NovaConstants
+from utils.commandtype_enum import CommandType
 
 class FaceDetectionControlLoop:
     def __init__(self, serial_communication):
@@ -76,12 +77,11 @@ class FaceDetectionControlLoop:
 
     def __processResponses(self, cmds):
         for cmd in cmds:
-            (modcode, opcode, arg1, arg2, arg3) = cmd
-            if modcode is NovaConstants.MOD_FACE_DETECTION and opcode is NovaConstants.OP_FACE_DETECTION_ACK_COORDINATES:
-                self.commands_acked += 1
-                cmds.remove(cmd)
-                #ackbalance = self.__allCommandsAcknowledged()
-                #print(f"Received ACK: {ackbalance}")
+            if cmd[0] == CommandType.NOVA:
+                (type, modcode, opcode, arg1, arg2, arg3) = cmd
+                if modcode is NovaConstants.MOD_FACE_DETECTION and opcode is NovaConstants.OP_FACE_DETECTION_ACK_COORDINATES:
+                    self.commands_acked += 1
+                    cmds.remove(cmd)
 
     def run(self, cmds):
         self.__processResponses(cmds)
