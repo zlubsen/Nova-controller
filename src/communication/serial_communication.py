@@ -45,10 +45,10 @@ class SerialCommunication:
         return self.receivedCommands.popleft()
 
     def writeCommand(self, modcode, opcode, args):
-        if self.connected:
             cmd_content = [modcode, opcode] + args
             command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
-            self.ser.write(command.encode())
+            if self.connected:
+                self.ser.write(command.encode())
             self.__printOutgoingCommand(command)
 
     def __recvBytesWithStartEndMarkers(self):
@@ -67,14 +67,16 @@ class SerialCommunication:
     def __parseInput(self):
         if self.newData:
             cmdFields = ''.join([byte.decode() for byte in self.receivedBytes]).split(NovaConstants.CMD_SEPARATOR)
-            cmd = [CommandType.NOVA].extend(cmdFields)
+            cmd = [CommandType.NOVA] + cmdFields
             self.receivedCommands.append(tuple(cmd))
             self.newData = False
             self.receivedBytes.clear()
             self.__printIncomingCommand(tuple(cmd))
 
     def __printIncomingCommand(self, command):
-        print("[nova] " + ':'.join(command))
+        parts = list(command)
+        parts[0] = str(parts[0])
+        print("[nova] " + ':'.join(parts))
 
     def __printOutgoingCommand(self, command):
         print("[cntr] " + command)
