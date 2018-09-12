@@ -2,7 +2,7 @@ import cv2 as cv
 from communication.serial_communication import SerialCommunication
 from communication.zmq_status_pub_communication import StatusPubCommunication
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
-from controlloop.keyboard_mouse_output import KeyboardMouseControlLoop
+from controlloop.external_input import ExternalInputControlLoop
 from controlloop.facedetection import FaceDetectionControlLoop
 from config.config import NovaConfig
 
@@ -20,7 +20,7 @@ def setupInputLoops():
 
 def setupControlLoops():
     loops = []
-    loops.append(KeyboardMouseControlLoop(serial_comm))
+    loops.append(ExternalInputControlLoop(serial_comm))
     #loops.append(FaceDetectionControlLoop(serial_comm))
     loops.append(StatusPubCommunication(NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
