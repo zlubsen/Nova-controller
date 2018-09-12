@@ -11,8 +11,9 @@ class ExternalInputControlLoop():
     def run(self, cmds):
         for cmd in cmds:
             if cmd[0] == CommandType.INPUT:
-                (type, opcode, degrees) = cmd
-                self.serial_comm.writeCommand(NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, opcode, [degrees])
+                (type, modcode, opcode, args) = cmd
+                self.serial_comm.writeCommand(modcode, opcode, args)
+                cmds.remove(cmd)
 
     def cleanup(self):
         pass
