@@ -173,7 +173,7 @@ class KeyboardMouseInputLoop:
         degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
         move = self.mouse_index['MOUSE_SCROLL_' + direction]
         args = [degrees, 0, 0]
-        cmd = (CommandType.INPUT, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], args)
+        cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], args)
         self.move_commands.append(cmd)
 
     def run(self):
