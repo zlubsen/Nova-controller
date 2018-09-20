@@ -7,27 +7,29 @@ from utils.commandtype_enum import CommandType
 from utils.frequencytimer import FrequencyTimer
 
 class NovaMove(Enum):
-    QUIT_CONTROLLER = 1
-    HEAD_MOVE_FRONT = 2
-    HEAD_MOVE_BACK = 3
-    HEAD_MOVE_UP = 4
-    HEAD_MOVE_DOWN = 5
-    BODY_MOVE_RIGHT = 6
-    BODY_MOVE_LEFT = 7
-    HEAD_ROTATE_UP = 8
-    HEAD_ROTATE_DOWN = 9
-    HEAD_ROTATE_LEFT = 10
-    HEAD_ROTATE_RIGHT = 11
-    SET_MODE_JOYSTICK_ABSOLUTE = 12
-    SET_MODE_JOYSTICK_RELATIVE = 13
-    SET_MODE_EXTERNAL_INPUT = 14
-    SET_MODE_DISTANCE_AVOIDANCE = 15
-    SET_MODE_FACE_DETECTION = 16
+    HEAD_MOVE_FRONT = 1
+    HEAD_MOVE_BACK = 2
+    HEAD_MOVE_UP = 3
+    HEAD_MOVE_DOWN = 4
+    BODY_MOVE_RIGHT = 5
+    BODY_MOVE_LEFT = 6
+    HEAD_ROTATE_UP = 7
+    HEAD_ROTATE_DOWN = 8
+    HEAD_ROTATE_LEFT = 9
+    HEAD_ROTATE_RIGHT = 10
+    SET_MODE_JOYSTICK_ABSOLUTE = 11
+    SET_MODE_JOYSTICK_RELATIVE = 12
+    SET_MODE_EXTERNAL_INPUT = 13
+    SET_MODE_DISTANCE_AVOIDANCE = 14
+    SET_MODE_FACE_DETECTION = 15
+    QUIT_CONTROLLER = 16
+    TOGGLE_DISPLAY_CONTROLS = 17
 
 class KeyboardMouseInputLoop:
     # dict that maps defined actions by id to (key_binding, mouse_binding, int_id, positive_direction, description, action) tuples
     actionDict = {
         NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processControllerOperationCommand(NovaMove.QUIT_CONTROLLER)),
+        NovaMove.TOGGLE_DISPLAY_CONTROLS : ('z', 'NONE', '', "Show/Hide controls on screen", lambda self: self.__processControllerOperationCommand(NovaMove.TOGGLE_DISPLAY_CONTROLS)),
 
         NovaMove.SET_MODE_JOYSTICK_ABSOLUTE : ('1', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE, "Set mode to Joystick - absolute control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_ABSOLUTE)),
         NovaMove.SET_MODE_JOYSTICK_RELATIVE : ('2', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_RELATIVE, "Set mode to Joystick - relative control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_RELATIVE)),
@@ -68,13 +70,16 @@ class KeyboardMouseInputLoop:
         cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
         self.mouse_timer = FrequencyTimer(NovaConfig.EXTERNAL_INPUT_MOUSE_FREQUENCY_MS)
 
+        self.show_controls = False
+        self.help_text_keys = self.__buildHelpTextForKeys()
+
     # build and index of possible keys/mouse events, (dict key as ord('x')) so we can search based on the pressed key and mouse event
     def __buildInputIndexes(self):
         key_index = {}
         mouse_index = {}
 
-        for id, tuple in self.actionDict.items():
-            (key, mouse, op_id, desc, action) = tuple
+        for id, items in self.actionDict.items():
+            (key, mouse, op_id, desc, action) = items
             key_index[ord(key)] = id
             mouse_index[mouse] = id
 
@@ -82,6 +87,15 @@ class KeyboardMouseInputLoop:
 
     def __buildMouseIndex(self):
         mouse_index = {}
+
+    def __buildHelpTextForKeys(self):
+        help_text_keys = []
+        for id, items in self.actionDict.items():
+            key = items[0]
+            text = items[3]
+            help_text_keys.append(f"{key} : {text}")
+
+        return help_text_keys
 
     def __readKeyInput(self):
         key_pressed = (cv.waitKey(1) & 0xFF)
@@ -93,6 +107,8 @@ class KeyboardMouseInputLoop:
         if operation == NovaMove.QUIT_CONTROLLER:
             self.running = False
             print("[cntr] Closing Nova controller... Bye")
+        if operation == NovaMove.TOGGLE_DISPLAY_CONTROLS:
+            self.show_controls = not self.show_controls
 
     def __processModeSelectionCommand(self, operation):
         new_mod_code = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
@@ -125,18 +141,18 @@ class KeyboardMouseInputLoop:
                 self.prev_y = y
 
     def __calculateMouseMove(self, x, y, flags):
-        mode = self.__determineMouseMode(flags)
+        mouse_mode = self.__determineMouseMode(flags)
         direction_x = self.__determineMouseDirection(x, self.prev_x)
         direction_y = self.__determineMouseDirection(y, self.prev_y)
 
         # TODO set degrees depending on the delta of X or Y axis (perhaps using multiples of stepsize)
         if not direction_x == '':
             degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_x == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
-            self.__createCommandFromMouseMove(mode, 'X', direction_x, degrees)
+            self.__createCommandFromMouseMove(mouse_mode, 'X', direction_x, degrees)
 
         if not direction_y == '':
             degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_y == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
-            self.__createCommandFromMouseMove(mode, 'Y', direction_y, degrees)
+            self.__createCommandFromMouseMove(mouse_mode, 'Y', direction_y, degrees)
 
     def __determineMouseMode(self, flags):
         mode = ''
@@ -154,8 +170,8 @@ class KeyboardMouseInputLoop:
             direction = 'PLUS'
         return direction
 
-    def __createCommandFromMouseMove(self, mode, axis, direction, degrees):
-        parts_of_id = ['MOUSE', mode, axis, direction]
+    def __createCommandFromMouseMove(self, mouse_mode, axis, direction, degrees):
+        parts_of_id = ['MOUSE', mouse_mode, axis, direction]
         mouse_event_id = '_'.join(parts_of_id)
         move = self.mouse_index[mouse_event_id]
 
@@ -176,8 +192,18 @@ class KeyboardMouseInputLoop:
         cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], args)
         self.move_commands.append(cmd)
 
+#    def __decorateImage(self):
+#        if self.show_controls:
+#            no_of_items = len(self.help_text_keys)
+#            for line in self.help_text_keys:
+#                x_coordinate = 5
+#                y_coordinate = 5 + ((20 + 4) * (no_of_items - 1))
+#                cv.putText(NovaConfig.NOVA_WINDOW_NAME, line, (x_coordinate, y_coordinate), cv.FONT_HERSHEY_PLAIN, 1.0, (255,255,255), thickness = 1)
+#                no_of_items -= no_of_items
+
     def run(self):
         self.__readKeyInput()
+        self.__decorateImage()
 
     def isRunning(self):
         return self.running

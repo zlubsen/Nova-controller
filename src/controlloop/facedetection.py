@@ -20,6 +20,7 @@ class FaceDetectionControlLoop:
         cap.set(cv.CAP_PROP_FRAME_HEIGHT,NovaConfig.FACE_DETECTION_CAPTURE_SIZE_Y)
         return cap
 
+    # move capturing the frame to window_base.py; read the frame from this place
     def __captureFrame(self, video):
         ret, frame = video.read()
         return frame
