@@ -44,7 +44,7 @@ class StatusPubCommunication:
     def __publishStatuses(self):
         self.socket.send_pyobj(self.assetStatus)
 
-    def run(self, cmds):
+    def run(self, cmds, frame):
         self.__processStatusUpdates(cmds)
 
         if self.timer.frequencyElapsed():

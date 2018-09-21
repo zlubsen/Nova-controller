@@ -31,7 +31,7 @@ class SerialCommunication:
     def close(self):
         self.ser.close()
 
-    def run(self):
+    def run(self, frame):
         if self.connected:
             self.__recvBytesWithStartEndMarkers()
             self.__parseInput()

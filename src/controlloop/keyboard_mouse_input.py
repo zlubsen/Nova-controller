@@ -192,18 +192,19 @@ class KeyboardMouseInputLoop:
         cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], args)
         self.move_commands.append(cmd)
 
-#    def __decorateImage(self):
-#        if self.show_controls:
-#            no_of_items = len(self.help_text_keys)
-#            for line in self.help_text_keys:
-#                x_coordinate = 5
-#                y_coordinate = 5 + ((20 + 4) * (no_of_items - 1))
-#                cv.putText(NovaConfig.NOVA_WINDOW_NAME, line, (x_coordinate, y_coordinate), cv.FONT_HERSHEY_PLAIN, 1.0, (255,255,255), thickness = 1)
-#                no_of_items -= no_of_items
+    # TODO lots of config items to put in NovaConfig here
+    def __decorateFrame(self, frame):
+        if self.show_controls:
+            index = 0
+            for line in self.help_text_keys:
+                x_coordinate = 5
+                y_coordinate = 10 + (12 * (index))
+                cv.putText(frame, line, (x_coordinate, y_coordinate), cv.FONT_HERSHEY_PLAIN, 0.75, (255,255,255), thickness = 1)
+                index += 1
 
-    def run(self):
+    def run(self, frame):
         self.__readKeyInput()
-        self.__decorateImage()
+        self.__decorateFrame(frame)
 
     def isRunning(self):
         return self.running

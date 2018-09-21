@@ -8,7 +8,7 @@ class ExternalInputControlLoop():
     def __processCommand(self):
         pass
 
-    def run(self, cmds):
+    def run(self, cmds, frame):
         for cmd in cmds:
             if cmd[0] == CommandType.INPUT:
                 (type, modcode, opcode, args) = cmd
