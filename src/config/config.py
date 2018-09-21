@@ -33,7 +33,6 @@ class NovaConfig(Const):
     EXTERNAL_INPUT_STEPSIZE_DEGREES = 1
     EXTERNAL_INPUT_MOUSE_FREQUENCY_MS = 30
 
-    #FACE_DETECTION_WINDOW_NAME = 'NovaVision'
     FACE_DETECTION_FACE_CASCADE_PATH = "../data/haarcascades/haarcascade_frontalface_default.xml"
     FACE_DETECTION_CAPTURE_SIZE_X = 320
     FACE_DETECTION_CAPTURE_SIZE_Y = 240

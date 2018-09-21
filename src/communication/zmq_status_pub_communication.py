@@ -21,9 +21,9 @@ class StatusPubCommunication:
         self.timer = FrequencyTimer(pub_frequency)
         self.assetStatus = {}
 
-    def __initAssets(self):
-        for k,v in StatusPubCommunication.assetDict:
-            self.assetStatus.add()
+#    def __initAssets(self):
+#        for k,v in StatusPubCommunication.assetDict:
+#            self.assetStatus.add()
 
     def __setupZMQ(self, uri):
         self.context = zmq.Context()
