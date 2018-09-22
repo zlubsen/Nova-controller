@@ -156,7 +156,7 @@ class KeyboardMouseInputLoop:
             opcode = self.__determinePIDopcode(modcode)
             pid_values = self.__determinePIDvalues(move, modcode, opcode)
 
-        args = list(pid_values)
+        args = list((int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
         cmd = (CommandType.INPUT, modcode, opcode, args)
 
     def __togglePIDcontrollerToTune(self, modcode):
