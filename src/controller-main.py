@@ -26,6 +26,12 @@ def setupControlLoops():
     loops.append(StatusPubCommunication(NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
 
+def setupStatusDict():
+    dict = {
+        "current_mode" : NovaConfig.STARTUP_MODE
+        }
+    return dict
+
 def loop():
     global status_dict
 
@@ -49,7 +55,7 @@ def main():
     global window_base
     global status_dict
 
-    status_dict = {}
+    status_dict = setupStatusDict()
 
     window_base = WindowBaseLoop()
     input_loops = setupInputLoops()

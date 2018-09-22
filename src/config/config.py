@@ -1,3 +1,5 @@
+from config.constants import NovaConstants
+
 class MetaConst(type):
     def __getattr__(cls, key):
         return cls[key]
@@ -26,6 +28,10 @@ class NovaConfig(Const):
     COMPCOMM_COMMAND_URI = f"tcp://*:{COMPCOMM_COMMAND_SOCKET}"
 
     NOVA_WINDOW_NAME = 'Nova'
+
+    STARTUP_MODE = NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE
+
+    TUNE_PID_STEPSIZE = 0.05
 
     # module specific constants
     STATUS_PUBLISH_FREQUENCY_MS = 2000
