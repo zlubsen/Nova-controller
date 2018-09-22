@@ -4,10 +4,11 @@ from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 
 class FaceDetectionControlLoop:
-    def __init__(self, serial_communication):
+    def __init__(self, serial_communication, status_dict):
         self.commands_send = 0
         self.commands_acked = 0
         self.serial_comm = serial_communication
+        self.status_dict = status_dict
         self.face_cascade = self.__setupFaceRecognition()
 
     def __setupFaceRecognition(self):
@@ -71,8 +72,9 @@ class FaceDetectionControlLoop:
                     self.commands_acked += 1
                     cmds.remove(cmd)
 
-    def run(self, cmds, frame):
+    def run(self, cmds):
         self.__processResponses(cmds)
+        frame = self.status_dict["frame"]
 
         (found, x,y) = self.__detectAndProcessFaces(frame)
         if self.__allCommandsAcknowledged() and found:

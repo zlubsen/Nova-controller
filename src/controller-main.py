@@ -12,42 +12,44 @@ def setupInputLoops():
     global keyboard_mouse_input
 
     serial_comm = SerialCommunication()
-    keyboard_mouse_input = KeyboardMouseInputLoop(serial_comm)
+    keyboard_mouse_input = KeyboardMouseInputLoop(serial_comm, status_dict)
 
     loops = []
     loops.append(serial_comm)
-    #loops.append(window_base)
     loops.append(keyboard_mouse_input)
     return loops
 
 def setupControlLoops():
     loops = []
-    loops.append(ExternalInputControlLoop(serial_comm))
-    loops.append(FaceDetectionControlLoop(serial_comm))
+    loops.append(ExternalInputControlLoop(serial_comm, status_dict))
+    loops.append(FaceDetectionControlLoop(serial_comm, status_dict))
     loops.append(StatusPubCommunication(NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
 
-#def setupWindow():
-#    cv.namedWindow(NovaConfig.NOVA_WINDOW_NAME, cv.WINDOW_AUTOSIZE)
-
 def loop():
+    global status_dict
+
     cmds = []
-    frame = window_base.captureFrame()
+    status_dict["frame"] = window_base.captureFrame()
 
     for input_loop in input_loops:
-        input_loop.run(frame)
+        input_loop.run()
         while input_loop.commandAvailable():
             cmds.append(input_loop.readCommand())
 
     for control_loop in control_loops:
-        control_loop.run(cmds, frame)
+        control_loop.run(cmds)
 
-    window_base.finaliseFrame(frame)
+    window_base.finaliseFrame(status_dict["frame"])
+    status_dict.pop("frame", None)
 
 def main():
     global input_loops
     global control_loops
     global window_base
+    global status_dict
+
+    status_dict = {}
 
     window_base = WindowBaseLoop()
     input_loops = setupInputLoops()

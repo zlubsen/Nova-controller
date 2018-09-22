@@ -24,12 +24,21 @@ class NovaMove(Enum):
     SET_MODE_FACE_DETECTION = 15
     QUIT_CONTROLLER = 16
     TOGGLE_DISPLAY_CONTROLS = 17
+    TOGGLE_STATUS_DETAILS = 18
+    TUNE_PID_P_VALUE_UP = 19
+    TUNE_PID_P_VALUE_DOWN = 20
+    TUNE_PID_I_VALUE_UP = 21
+    TUNE_PID_I_VALUE_DOWN = 22
+    TUNE_PID_D_VALUE_UP = 23
+    TUNE_PID_D_VALUE_DOWN = 24
+    CYCLE_PID_TUNE_CONTROLLER = 25
 
 class KeyboardMouseInputLoop:
     # dict that maps defined actions by id to (key_binding, mouse_binding, int_id, positive_direction, description, action) tuples
     actionDict = {
         NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processControllerOperationCommand(NovaMove.QUIT_CONTROLLER)),
         NovaMove.TOGGLE_DISPLAY_CONTROLS : ('z', 'NONE', '', "Show/Hide controls on screen", lambda self: self.__processControllerOperationCommand(NovaMove.TOGGLE_DISPLAY_CONTROLS)),
+        NovaMove.TOGGLE_STATUS_DETAILS : ('x', 'NONE', '', "Show/Hide Nova status on screen", lambda self: self.__processControllerOperationCommand(NovaMove.TOGGLE_STATUS_DETAILS)),
 
         NovaMove.SET_MODE_JOYSTICK_ABSOLUTE : ('1', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE, "Set mode to Joystick - absolute control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_ABSOLUTE)),
         NovaMove.SET_MODE_JOYSTICK_RELATIVE : ('2', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_RELATIVE, "Set mode to Joystick - relative control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_RELATIVE)),
@@ -57,8 +66,10 @@ class KeyboardMouseInputLoop:
     ACTION_DESCRIPTION_INDEX = 3
     ACTION_LAMBDA_INDEX = 4
 
-    def __init__(self, serial_communication):
+    def __init__(self, serial_communication, status_dict):
         self.serial_comm = serial_communication
+        self.status_dict = status_dict
+
         key_index, mouse_index = self.__buildInputIndexes()
         self.key_index = key_index
         self.mouse_index = mouse_index
@@ -72,6 +83,7 @@ class KeyboardMouseInputLoop:
 
         self.show_controls = False
         self.help_text_keys = self.__buildHelpTextForKeys()
+        self.show_status = False
 
     # build and index of possible keys/mouse events, (dict key as ord('x')) so we can search based on the pressed key and mouse event
     def __buildInputIndexes(self):
@@ -109,12 +121,15 @@ class KeyboardMouseInputLoop:
             print("[cntr] Closing Nova controller... Bye")
         if operation == NovaMove.TOGGLE_DISPLAY_CONTROLS:
             self.show_controls = not self.show_controls
+        if operation == NovaMove.TOGGLE_STATUS_DETAILS:
+            self.show_status = not self.show_status
 
     def __processModeSelectionCommand(self, operation):
         new_mod_code = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
         args = [new_mod_code,0,0]
         cmd = (CommandType.INPUT, NovaConstants.MOD_STATUS_NOVA, NovaConstants.OP_STATUS_SEND_SET_MODE, args)
         self.move_commands.append(cmd)
+        self.status_dict["current_mode"] = new_mod_code
 
     def __processMoveCommand(self, move, positive_direction):
         degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if positive_direction else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
@@ -201,9 +216,13 @@ class KeyboardMouseInputLoop:
                 y_coordinate = 10 + (12 * (index))
                 cv.putText(frame, line, (x_coordinate, y_coordinate), cv.FONT_HERSHEY_PLAIN, 0.75, (255,255,255), thickness = 1)
                 index += 1
+        if self.show_status:
+            # TODO placeholder text and position. Perhaps move this whole function to another class...
+            cv.putText(frame, "Here comes status stuff...", (200, 180), cv.FONT_HERSHEY_PLAIN, 0.75, (255,255,255), thickness = 1)
 
-    def run(self, frame):
+    def run(self):
         self.__readKeyInput()
+        frame = self.status_dict["frame"]
         self.__decorateFrame(frame)
 
     def isRunning(self):
