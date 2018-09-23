@@ -158,10 +158,9 @@ class KeyboardMouseInputLoop:
         else:
             opcode = self.__determinePIDopcode(modcode)
             pid_values = self.__determinePIDvalues(move, modcode, opcode)
-
-        args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
-        cmd = (CommandType.INPUT, modcode, opcode, args)
-        self.move_commands.append(cmd)
+            args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
+            cmd = (CommandType.INPUT, modcode, opcode, args)
+            self.move_commands.append(cmd)
 
     def __togglePIDcontrollerToTune(self, modcode):
         if modcode == NovaConstants.MOD_FACE_DETECTION:
@@ -177,11 +176,12 @@ class KeyboardMouseInputLoop:
         if modcode == NovaConstants.MOD_DISTANCE_AVOIDANCE:
             opcode = NovaConstants.OP_DISTANCE_SET_PID_TUNING
         if modcode == NovaConstants.MOD_FACE_DETECTION:
-            if "current_pid_controller_opcode" in self.status_dict:
-                opcode = self.status_dict["current_pid_controller_opcode"]
+            key = f"current_pid_controller_opcode_{modcode}"
+            if key in self.status_dict:
+                opcode = self.status_dict[key]
             else:
                 opcode = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING # default controller to tune is X-axis
-                self.status_dict["current_pid_controller_opcode"] = opcode
+                self.status_dict[key] = opcode
 
         return opcode
 
@@ -221,7 +221,7 @@ class KeyboardMouseInputLoop:
             Ki = Decimal(0)
         if Kd <= 0:
             Kd = Decimal(0)
-        
+
         return (Decimal(Kp).quantize(self.THREEPLACES), Decimal(Ki).quantize(self.THREEPLACES), Decimal(Kd).quantize(self.THREEPLACES))
 
     def __onMouse(self, event, x, y, flags, param):
