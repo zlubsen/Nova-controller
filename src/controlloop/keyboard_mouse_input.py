@@ -1,6 +1,7 @@
 import cv2 as cv
 from collections import deque
 from enum import Enum
+from decimal import Decimal
 from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
@@ -60,7 +61,7 @@ class KeyboardMouseInputLoop:
         NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFTRIGHT, "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT, False)),
 
         NovaMove.TUNE_PID_P_VALUE_UP : ('p', 'NONE', None, "Tune PID - increase Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_UP)),
-        NovaMove.TUNE_PID_P_VALUE_DOWN : (';', 'NONE', None, "Tune PID - decrease Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_D_VALUE_DOWN)),
+        NovaMove.TUNE_PID_P_VALUE_DOWN : (';', 'NONE', None, "Tune PID - decrease Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_DOWN)),
         NovaMove.TUNE_PID_I_VALUE_UP : ('[', 'NONE', None, "Tune PID - increase Ki", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_I_VALUE_UP)),
         NovaMove.TUNE_PID_I_VALUE_DOWN : ('\'', 'NONE', None, "Tune PID - decrease Ki", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_I_VALUE_DOWN)),
         NovaMove.TUNE_PID_D_VALUE_UP : (']', 'NONE', None, "Tune PID - increase Kd", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_D_VALUE_UP)),
@@ -73,6 +74,8 @@ class KeyboardMouseInputLoop:
     ACTION_OPERATION_ID_INDEX = 2
     ACTION_DESCRIPTION_INDEX = 3
     ACTION_LAMBDA_INDEX = 4
+
+    THREEPLACES = Decimal(10) ** -3
 
     def __init__(self, serial_communication, status_dict):
         self.serial_comm = serial_communication
@@ -156,17 +159,19 @@ class KeyboardMouseInputLoop:
             opcode = self.__determinePIDopcode(modcode)
             pid_values = self.__determinePIDvalues(move, modcode, opcode)
 
-        args = list((int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
+        args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
         cmd = (CommandType.INPUT, modcode, opcode, args)
+        self.move_commands.append(cmd)
 
     def __togglePIDcontrollerToTune(self, modcode):
         if modcode == NovaConstants.MOD_FACE_DETECTION:
-            if "current_pid_controller_opcode" in self.status_dict:
-                opcode = self.status_dict["current_pid_controller_opcode"]
+            key = f"current_pid_controller_opcode_{modcode}"
+            if key in self.status_dict:
+                opcode = self.status_dict[key]
                 if opcode == NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING:
-                    self.status_dict["current_pid_controller_opcode"] = NovaConstants.OP_FACE_DETECTION_SET_Y_PID_TUNING
+                    self.status_dict[key] = NovaConstants.OP_FACE_DETECTION_SET_Y_PID_TUNING
                 else:
-                    self.status_dict["current_pid_controller_opcode"] = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
+                    self.status_dict[key] = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
 
     def __determinePIDopcode(self, modcode):
         if modcode == NovaConstants.MOD_DISTANCE_AVOIDANCE:
@@ -178,30 +183,46 @@ class KeyboardMouseInputLoop:
                 opcode = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING # default controller to tune is X-axis
                 self.status_dict["current_pid_controller_opcode"] = opcode
 
+        return opcode
+
     # TODO can we make this one more neat?
     def __determinePIDvalues(self, move, modcode, opcode):
         Kp = self.status_dict[f"{modcode}_{opcode}_Kp"]
         Ki = self.status_dict[f"{modcode}_{opcode}_Ki"]
         Kd = self.status_dict[f"{modcode}_{opcode}_Kd"]
 
+        stepsize = Decimal(NovaConfig.TUNE_PID_STEPSIZE).quantize(self.THREEPLACES)
+
         if move == NovaMove.TUNE_PID_P_VALUE_UP:
-            Kp += NovaConfig.TUNE_PID_STEPSIZE
+            Kp = Kp + stepsize
         elif move == NovaMove.TUNE_PID_P_VALUE_DOWN:
-            Kp -= NovaConfig.TUNE_PID_STEPSIZE
+            Kp = Kp - stepsize
         elif move == NovaMove.TUNE_PID_I_VALUE_UP:
-            Ki += NovaConfig.TUNE_PID_STEPSIZE
+            Ki = Ki + stepsize
         elif move == NovaMove.TUNE_PID_I_VALUE_DOWN:
-            Ki -= NovaConfig.TUNE_PID_STEPSIZE
+            Ki = Ki - stepsize
         elif move == NovaMove.TUNE_PID_D_VALUE_UP:
-            Kd += NovaConfig.TUNE_PID_STEPSIZE
+            Kd = Kd + stepsize
         elif move == NovaMove.TUNE_PID_D_VALUE_DOWN:
-            Kd -= NovaConfig.TUNE_PID_STEPSIZE
+            Kd = Kd - stepsize
 
-        self.status_dict[f"{modcode}_{opcode}_Kp"] = Kp
-        self.status_dict[f"{modcode}_{opcode}_Ki"] = Ki
-        self.status_dict[f"{modcode}_{opcode}_Kd"] = Kd
+        Kp_final, Ki_final, Kd_final = self.__sanitizeValues(Kp, Ki, Kd)
 
-        return (Kp, Ki, Kd)
+        self.status_dict[f"{modcode}_{opcode}_Kp"] = Kp_final
+        self.status_dict[f"{modcode}_{opcode}_Ki"] = Ki_final
+        self.status_dict[f"{modcode}_{opcode}_Kd"] = Kd_final
+
+        return (Kp_final, Ki_final, Kd_final)
+
+    def __sanitizeValues(self, Kp, Ki, Kd):
+        if Kp <= 0:
+            Kp = Decimal(0)
+        if Ki <= 0:
+            Ki = Decimal(0)
+        if Kd <= 0:
+            Kd = Decimal(0)
+        
+        return (Decimal(Kp).quantize(self.THREEPLACES), Decimal(Ki).quantize(self.THREEPLACES), Decimal(Kd).quantize(self.THREEPLACES))
 
     def __onMouse(self, event, x, y, flags, param):
         if event == cv.EVENT_RBUTTONDOWN or event == cv.EVENT_LBUTTONDOWN:

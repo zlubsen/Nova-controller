@@ -6,6 +6,7 @@ from controlloop.external_input import ExternalInputControlLoop
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
 from controlloop.facedetection import FaceDetectionControlLoop
 from config.config import NovaConfig
+from config.constants import NovaConstants
 
 def setupInputLoops():
     global serial_comm
@@ -23,14 +24,15 @@ def setupControlLoops():
     loops = []
     loops.append(ExternalInputControlLoop(serial_comm, status_dict))
     loops.append(FaceDetectionControlLoop(serial_comm, status_dict))
-    loops.append(StatusPubCommunication(NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
+    loops.append(StatusPubCommunication(status_dict, NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
 
 def setupStatusDict():
-    dict = {
-        "current_mode" : NovaConfig.STARTUP_MODE
-        }
-    return dict
+    statusdict = {}
+    statusdict["current_mode"] = NovaConfig.STARTUP_MODE
+    statusdict[f"current_pid_controller_opcode_{NovaConstants.MOD_FACE_DETECTION}"] = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
+
+    return statusdict
 
 def loop():
     global status_dict
