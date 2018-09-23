@@ -37,6 +37,9 @@ class NovaConstants(Const):
     OP_STATUS_RECEIVE_JOY_LEFT = '7'            # (x, y, pushed in arg1, arg2, arg3)
     OP_STATUS_RECEIVE_JOY_RIGHT = '8'           # (x, y, pushed in arg1, arg2, arg3)
     OP_STATUS_SEND_SET_MODE = '9'               # (set new modulecode as arg1)
+    OP_STATUS_RECEIVE_DISTANCE_PID = '10'       # (Kp, Ki, Kd values in arg1, arg2, arg3)
+    OP_STATUS_RECEIVE_FACEDETECT_PID_X = '11'   # (Kp, Ki, Kd values in arg1, arg2, arg3)
+    OP_STATUS_RECEIVE_FACEDETECT_PID_Y = '12'   # (Kp, Ki, Kd values in arg1, arg2, arg3)
 
     OP_DISTANCE_SET_MIN_DIST = '1'              # (new minimum distance in arg1)
     OP_DISTANCE_SET_MAX_DIST = '2'              # (new maximum distance in arg1)
