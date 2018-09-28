@@ -108,9 +108,6 @@ class KeyboardMouseInputLoop:
 
         return key_index, mouse_index
 
-    def __buildMouseIndex(self):
-        mouse_index = {}
-
     def __buildHelpTextForKeys(self):
         help_text_keys = []
         for id, items in self.actionDict.items():
