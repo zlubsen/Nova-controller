@@ -26,7 +26,7 @@ class SerialCommunication:
             self.connected = True
         except serial.serialutil.SerialException:
             self.connected = False
-            print("[cntr] Failed to open serial connection to Nova")
+            print("[cntr] Failed to open serial connection to Nova.")
 
     def close(self):
         self.ser.close()
@@ -45,24 +45,32 @@ class SerialCommunication:
         return self.receivedCommands.popleft()
 
     def writeCommand(self, modcode, opcode, args):
-            cmd_content = [modcode, opcode] + args
-            command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
-            if self.connected:
+        cmd_content = [modcode, opcode] + args
+        command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
+        if self.connected:
+            try:
                 self.ser.write(command.encode())
-            self.__printOutgoingCommand(command)
+            except serial.serialutil.SerialException:
+                self.connected = False
+                print("[cntr] Failure while writing command to Nova.")
+        self.__printOutgoingCommand(command)
 
     def __recvBytesWithStartEndMarkers(self):
-        while(self.connected and self.ser.in_waiting > 0 and not self.newData):
-            receivedByte = self.ser.read()
+        try:
+            while(self.connected and self.ser.in_waiting > 0 and not self.newData):
+                receivedByte = self.ser.read()
 
-            if self.recvInProgress:
-                if receivedByte is not NovaConstants.CMD_END_MARKER.encode():
-                    self.receivedBytes.append(receivedByte)
-                else:
-                    self.recvInProgress = False
-                    self.newData = True
-            elif receivedByte is NovaConstants.CMD_START_MARKER.encode():
-                self.recvInProgress = True
+                if self.recvInProgress:
+                    if receivedByte is not NovaConstants.CMD_END_MARKER.encode():
+                        self.receivedBytes.append(receivedByte)
+                    else:
+                        self.recvInProgress = False
+                        self.newData = True
+                elif receivedByte is NovaConstants.CMD_START_MARKER.encode():
+                    self.recvInProgress = True
+        except serial.serialutil.SerialException:
+            self.connected = False
+            print("[cntr] Failure while reading serial input from Nova.")
 
     def __parseInput(self):
         if self.newData:
