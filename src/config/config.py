@@ -28,6 +28,7 @@ class NovaConfig(Const):
     COMPCOMM_COMMAND_URI = f"tcp://*:{COMPCOMM_COMMAND_SOCKET}"
 
     NOVA_WINDOW_NAME = 'Nova'
+    NOVA_WINDOW_NOIMAGE_PATH = "images/no_image_available.png"
 
     STARTUP_MODE = NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE
 

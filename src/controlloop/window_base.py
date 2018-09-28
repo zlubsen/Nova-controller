@@ -12,6 +12,7 @@ class WindowBaseLoop:
         self.__createWindow()
         self.video_capture = self.__createVideoCapture()
         self.frame = None
+        self.no_video_available_image = self.__initNotAvailableImage()
 
     def __createWindow(self):
         cv.namedWindow(NovaConfig.NOVA_WINDOW_NAME, cv.WINDOW_AUTOSIZE)
@@ -24,7 +25,10 @@ class WindowBaseLoop:
 
     def captureFrame(self):
         ret, frame = self.video_capture.read()
-        return frame
+        if not ret:
+            return frame
+        else:
+            return self.no_video_available_image
 
     def finaliseFrame(self, frame):
         cv.imshow(NovaConfig.NOVA_WINDOW_NAME, frame)
@@ -32,3 +36,7 @@ class WindowBaseLoop:
     def cleanup(self):
         self.video_capture.release()
         cv.destroyAllWindows()
+
+    def __initNotAvailableImage(self):
+        image = cv.imread(NovaConfig.NOVA_WINDOW_NOIMAGE_PATH)
+        return cv.resize(image, (NovaConfig.FACE_DETECTION_CAPTURE_SIZE_X, NovaConfig.FACE_DETECTION_CAPTURE_SIZE_Y),interpolation = cv.INTER_AREA)
