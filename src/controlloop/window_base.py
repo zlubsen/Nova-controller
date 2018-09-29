@@ -25,7 +25,7 @@ class WindowBaseLoop:
 
     def captureFrame(self):
         ret, frame = self.video_capture.read()
-        if not ret:
+        if ret:
             return frame
         else:
             return self.no_video_available_image

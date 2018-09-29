@@ -20,6 +20,8 @@ class SerialCommunication:
         self.receivedBytes = []
         self.receivedCommands = deque()
 
+        #self.file = open("telemetry.txt", 'w', newline='\r\n') # open telemetry
+
     def __open(self):
         try:
             self.ser.open()
@@ -30,6 +32,7 @@ class SerialCommunication:
 
     def close(self):
         self.ser.close()
+        #self.file.close() # close telemetry
 
     def run(self):
         if self.connected:
@@ -45,15 +48,15 @@ class SerialCommunication:
         return self.receivedCommands.popleft()
 
     def writeCommand(self, modcode, opcode, args):
-        cmd_content = [modcode, opcode] + args
-        command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
-        if self.connected:
-            try:
-                self.ser.write(command.encode())
-            except serial.serialutil.SerialException:
-                self.connected = False
-                print("[cntr] Failure while writing command to Nova.")
-        self.__printOutgoingCommand(command)
+            cmd_content = [modcode, opcode] + args
+            command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
+            if self.connected:
+                try:
+                    self.ser.write(command.encode())
+                    self.__printOutgoingCommand(command)
+                except serial.serialutil.SerialException:
+                    self.connected = False
+                    print("[ctrl] SerialException while writing to Nova.")
 
     def __recvBytesWithStartEndMarkers(self):
         try:
@@ -70,24 +73,35 @@ class SerialCommunication:
                     self.recvInProgress = True
         except serial.serialutil.SerialException:
             self.connected = False
-            print("[cntr] Failure while reading serial input from Nova.")
+            self.newData = False
+            self.recvInProgress = False
+            self.receivedBytes = []
+            print("[ctrl] SerialException while reading from Nova.")
 
     def __parseInput(self):
         if self.newData:
             cmdFields = ''.join([byte.decode() for byte in self.receivedBytes]).split(NovaConstants.CMD_SEPARATOR)
             cmd = [CommandType.NOVA] + cmdFields
-            self.receivedCommands.append(tuple(cmd))
             self.newData = False
             self.receivedBytes.clear()
-            self.__printIncomingCommand(tuple(cmd))
+    #        if cmdFields[0] == "99":
+    #            self.__storeTelemetry(cmdFields)
+    #        else:
+            self.receivedCommands.append(tuple(cmd))
+            self.__printIncomingCommand(cmd)
 
     def __printIncomingCommand(self, command):
-        parts = list(command)
-        parts[0] = str(parts[0])
-        print("[nova] " + ':'.join(parts))
+        #parts = list(command)
+        #parts[0] = str(parts[0])
+        command[0] = str(command[0])
+        print("[nova] " + ':'.join(command))
 
     def __printOutgoingCommand(self, command):
         print("[cntr] " + command)
+
+    #def __storeTelemetry(self, cmd):
+    #    self.file.write(",".join(list(cmd)) + "\n")
+    #    self.file.flush()
 
     def __determineSerialPort(self):
         if sys.platform.startswith('win32'):
