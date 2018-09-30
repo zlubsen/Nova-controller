@@ -45,6 +45,7 @@ class NovaConstants(Const):
     OP_DISTANCE_SET_MAX_DIST = '2'              # (new maximum distance in arg1)
     OP_DISTANCE_SET_SETPOINT = '3'              # (new setpoint in arg1)
     OP_DISTANCE_SET_PID_TUNING = '4'            # (p, i, d in arg1, arg2, arg3)
+    #OP_DISTANCE_SET_PID_AUTOMATIC = '5'         # (arg1: 1 for automatic, arg1: 0 for manual)
 
     OP_FACE_DETECTION_SET_COORDINATES = '1'     # (x, y) in arg1, arg2)
     OP_FACE_DETECTION_ACK_COORDINATES = '2'     # ack for received coordinates
@@ -52,6 +53,8 @@ class NovaConstants(Const):
     OP_FACE_DETECTION_SET_Y_SETPOINT = '4'      # (new setpoint in arg1)
     OP_FACE_DETECTION_SET_X_PID_TUNING = '5'    # (p, i, d in arg1, arg2, arg3)
     OP_FACE_DETECTION_SET_Y_PID_TUNING = '6'    # (p, i, d in arg1, arg2, arg3)
+    #OP_FACE_DETECTION_SET_X_PID_AUTOMATIC = '7' # (arg1: 1 for automatic, arg1: 0 for manual)
+    #OP_FACE_DETECTION_SET_Y_PID_AUTOMATIC = '8' # (arg1: 1 for automatic, arg1: 0 for manual)
 
     OP_EXTERNAL_INPUT_HEAD_MOVE_FRONTBACK = '1'     # (# steps in arg1)
     OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFTRIGHT = '2'   # etc

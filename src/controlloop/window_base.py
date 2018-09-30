@@ -15,12 +15,12 @@ class WindowBaseLoop:
         self.no_video_available_image = self.__initNotAvailableImage()
 
     def __createWindow(self):
-        cv.namedWindow(NovaConfig.NOVA_WINDOW_NAME, cv.WINDOW_AUTOSIZE)
+        cv.namedWindow(NovaConfig.NOVA_WINDOW_NAME, cv.WINDOW_NORMAL)
 
     def __createVideoCapture(self):
         cap = cv.VideoCapture(0) # capture from default camera
-        cap.set(cv.CAP_PROP_FRAME_WIDTH,NovaConfig.FACE_DETECTION_CAPTURE_SIZE_X)
-        cap.set(cv.CAP_PROP_FRAME_HEIGHT,NovaConfig.FACE_DETECTION_CAPTURE_SIZE_Y)
+        cap.set(cv.CAP_PROP_FRAME_WIDTH,NovaConfig.NOVA_CAMERA_CAPTURE_SIZE_X)
+        cap.set(cv.CAP_PROP_FRAME_HEIGHT,NovaConfig.NOVA_CAMERA_CAPTURE_SIZE_Y)
         return cap
 
     def captureFrame(self):
@@ -39,4 +39,4 @@ class WindowBaseLoop:
 
     def __initNotAvailableImage(self):
         image = cv.imread(NovaConfig.NOVA_WINDOW_NOIMAGE_PATH)
-        return cv.resize(image, (NovaConfig.FACE_DETECTION_CAPTURE_SIZE_X, NovaConfig.FACE_DETECTION_CAPTURE_SIZE_Y),interpolation = cv.INTER_AREA)
+        return cv.resize(image, (NovaConfig.NOVA_CAMERA_CAPTURE_SIZE_X, NovaConfig.NOVA_CAMERA_CAPTURE_SIZE_Y),interpolation = cv.INTER_AREA)
