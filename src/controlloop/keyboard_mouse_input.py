@@ -24,22 +24,25 @@ class NovaMove(Enum):
     SET_MODE_DISTANCE_AVOIDANCE = 14
     SET_MODE_FACE_DETECTION = 15
     QUIT_CONTROLLER = 16
-    TOGGLE_DISPLAY_CONTROLS = 17
-    TOGGLE_STATUS_DETAILS = 18
-    TUNE_PID_P_VALUE_UP = 19
-    TUNE_PID_P_VALUE_DOWN = 20
-    TUNE_PID_I_VALUE_UP = 21
-    TUNE_PID_I_VALUE_DOWN = 22
-    TUNE_PID_D_VALUE_UP = 23
-    TUNE_PID_D_VALUE_DOWN = 24
-    TUNE_CYCLE_PID_CONTROLLER_IN_MODULE = 25
+    TOGGLE_WINDOW_FULL_SCREEN = 17
+    TOGGLE_DISPLAY_CONTROLS = 18
+    TOGGLE_STATUS_DETAILS = 19
+    TUNE_CYCLE_PID_CONTROLLER_IN_MODULE = 20
+    TOGGLE_PID_MANUAL_AUTO = 21
+    TUNE_PID_P_VALUE_UP = 22
+    TUNE_PID_P_VALUE_DOWN = 23
+    TUNE_PID_I_VALUE_UP = 24
+    TUNE_PID_I_VALUE_DOWN = 25
+    TUNE_PID_D_VALUE_UP = 26
+    TUNE_PID_D_VALUE_DOWN = 27
 
 class KeyboardMouseInputLoop:
     # dict that maps defined actions by id to (key_binding, mouse_binding, int_id, description, action) tuples
     actionDict = {
-        NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processControllerOperationCommand(NovaMove.QUIT_CONTROLLER)),
-        NovaMove.TOGGLE_DISPLAY_CONTROLS : ('z', 'NONE', '', "Show/Hide controls on screen", lambda self: self.__processControllerOperationCommand(NovaMove.TOGGLE_DISPLAY_CONTROLS)),
-        NovaMove.TOGGLE_STATUS_DETAILS : ('x', 'NONE', '', "Show/Hide Nova status on screen", lambda self: self.__processControllerOperationCommand(NovaMove.TOGGLE_STATUS_DETAILS)),
+        NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processQuitControllerCommand()),
+        NovaMove.TOGGLE_WINDOW_FULL_SCREEN : ('c', 'NONE', '', "Toggle full screen", lambda self: self.__processToggleWindowFullScreenCommand()),
+        NovaMove.TOGGLE_DISPLAY_CONTROLS : ('z', 'NONE', '', "Show/Hide controls on screen", lambda self: self.__processToggleDisplayControlsCommand()),
+        NovaMove.TOGGLE_STATUS_DETAILS : ('x', 'NONE', '', "Show/Hide Nova status on screen", lambda self: self.__processToggleDisplayStatusDetailsCommand()),
 
         NovaMove.SET_MODE_JOYSTICK_ABSOLUTE : ('1', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE, "Set mode to Joystick - absolute control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_ABSOLUTE)),
         NovaMove.SET_MODE_JOYSTICK_RELATIVE : ('2', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_RELATIVE, "Set mode to Joystick - relative control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_RELATIVE)),
@@ -67,6 +70,7 @@ class KeyboardMouseInputLoop:
         NovaMove.TUNE_PID_D_VALUE_UP : (']', 'NONE', None, "Tune PID - increase Kd", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_D_VALUE_UP)),
         NovaMove.TUNE_PID_D_VALUE_DOWN : ('\\', 'NONE', None, "Tune PID - decrease Kd", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_D_VALUE_DOWN)),
         NovaMove.TUNE_CYCLE_PID_CONTROLLER_IN_MODULE : ('0', 'NONE', None, "Tune PID - Cycle PID within module", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_CYCLE_PID_CONTROLLER_IN_MODULE)),
+        NovaMove.TOGGLE_PID_MANUAL_AUTO : ('-', 'NONE', None, "Tune PID - Toggle current on/off", lambda self: self.__processTunePIDCommand(NovaMove.TOGGLE_PID_MANUAL_AUTO)),
     }
 
     ACTION_KEY_INDEX = 0
@@ -76,25 +80,19 @@ class KeyboardMouseInputLoop:
     ACTION_LAMBDA_INDEX = 4
 
     THREEPLACES = Decimal(10) ** -3
+    pid_tune_stepsize = Decimal(NovaConfig.TUNE_PID_STEPSIZE).quantize(THREEPLACES)
 
     def __init__(self, serial_communication, status_dict):
         self.serial_comm = serial_communication
         self.status_dict = status_dict
 
-        key_index, mouse_index = self.__buildInputIndexes()
-        self.key_index = key_index
-        self.mouse_index = mouse_index
+        self.__buildInputIndexes()
 
         self.running = True
         self.move_commands = deque()
 
-        self.mouse_move_on = False
-        cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
-        self.mouse_timer = FrequencyTimer(NovaConfig.EXTERNAL_INPUT_MOUSE_FREQUENCY_MS)
-
-        self.show_controls = False
-        self.help_text_keys = self.__buildHelpTextForKeys()
-        self.show_status = False
+        self.__setupMouseControl()
+        self.__setupFrameDecoration()
 
     # build and index of possible keys/mouse events, (dict key as ord('x')) so we can search based on the pressed key and mouse event
     def __buildInputIndexes(self):
@@ -106,7 +104,21 @@ class KeyboardMouseInputLoop:
             key_index[ord(key)] = id
             mouse_index[mouse] = id
 
-        return key_index, mouse_index
+        self.key_index = key_index
+        self.mouse_index = mouse_index
+
+    def __buildMouseIndex(self):
+        mouse_index = {}
+
+    def __setupMouseControl(self):
+        self.mouse_move_on = False
+        cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
+        self.mouse_timer = FrequencyTimer(NovaConfig.EXTERNAL_INPUT_MOUSE_FREQUENCY_MS)
+
+    def __setupFrameDecoration(self):
+        self.show_controls = False
+        self.help_text_keys = self.__buildHelpTextForKeys()
+        self.show_status = False
 
     def __buildHelpTextForKeys(self):
         help_text_keys = []
@@ -123,14 +135,22 @@ class KeyboardMouseInputLoop:
             operation = self.key_index[key_pressed]
             self.actionDict[operation][self.ACTION_LAMBDA_INDEX](self)
 
-    def __processControllerOperationCommand(self, operation):
-        if operation == NovaMove.QUIT_CONTROLLER:
-            self.running = False
-            print("[cntr] Closing Nova controller... Bye")
-        if operation == NovaMove.TOGGLE_DISPLAY_CONTROLS:
-            self.show_controls = not self.show_controls
-        if operation == NovaMove.TOGGLE_STATUS_DETAILS:
-            self.show_status = not self.show_status
+    def __processQuitControllerCommand(self):
+        self.running = False
+        print("[cntr] Closing Nova controller... Bye")
+
+    def __processToggleDisplayControlsCommand(self):
+        self.show_controls = not self.show_controls
+
+    def __processToggleDisplayStatusDetailsCommand(self):
+        self.show_status = not self.show_status
+
+    def __processToggleWindowFullScreenCommand(self):
+        window_mode = int(cv.getWindowProperty(NovaConfig.NOVA_WINDOW_NAME, cv.WND_PROP_FULLSCREEN))
+        if window_mode == cv.WINDOW_FULLSCREEN:
+            cv.setWindowProperty(NovaConfig.NOVA_WINDOW_NAME, cv.WND_PROP_FULLSCREEN, cv.WINDOW_NORMAL)
+        else:
+            cv.setWindowProperty(NovaConfig.NOVA_WINDOW_NAME, cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     def __processModeSelectionCommand(self, operation):
         new_mod_code = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
@@ -152,6 +172,8 @@ class KeyboardMouseInputLoop:
         modcode = self.status_dict["current_mode"]
         if move == NovaMove.TUNE_CYCLE_PID_CONTROLLER_IN_MODULE:
             self.__togglePIDcontrollerToTune(modcode)
+        elif move == NovaMove.TOGGLE_PID_MANUAL_AUTO:
+            self.__togglePIDcontrollerOnOff(modcode)
         else:
             opcode = self.__determinePIDopcode(modcode)
             pid_values = self.__determinePIDvalues(move, modcode, opcode)
@@ -160,14 +182,20 @@ class KeyboardMouseInputLoop:
             self.move_commands.append(cmd)
 
     def __togglePIDcontrollerToTune(self, modcode):
+        opcode = self.__determinePIDopcode(modcode)
+
         if modcode == NovaConstants.MOD_FACE_DETECTION:
-            key = f"current_pid_controller_opcode_{modcode}"
-            if key in self.status_dict:
-                opcode = self.status_dict[key]
-                if opcode == NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING:
-                    self.status_dict[key] = NovaConstants.OP_FACE_DETECTION_SET_Y_PID_TUNING
-                else:
-                    self.status_dict[key] = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
+            opcode = NovaConstants.OP_FACE_DETECTION_SET_Y_PID_TUNING if opcode == NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING else NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
+            self.__setCurrentPIDopcode(modcode, opcode)
+
+        print(f"[ctrl] Now tuning PID {opcode} for module {modcode}")
+
+    def __togglePIDcontrollerOnOff(self, modcode):
+        opcode = self.__determinePIDopcode(modcode)
+        print(f"Toggle PID controller {opcode} for mod {modcode} auto/manual not implemented")
+        #args = [opcode,0,0]
+        #cmd = (CommandType.INPUT, modcode, opcode, args)
+        #self.move_commands.append(cmd)
 
     def __determinePIDopcode(self, modcode):
         if modcode == NovaConstants.MOD_DISTANCE_AVOIDANCE:
@@ -178,9 +206,13 @@ class KeyboardMouseInputLoop:
                 opcode = self.status_dict[key]
             else:
                 opcode = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING # default controller to tune is X-axis
-                self.status_dict[key] = opcode
+                self.__setCurrentPIDopcode(modcode, opcode)
 
         return opcode
+
+    def __setCurrentPIDopcode(self, modcode, opcode):
+        key = f"current_pid_controller_opcode_{modcode}"
+        self.status_dict[key] = opcode
 
     # TODO can we make this one more neat?
     def __determinePIDvalues(self, move, modcode, opcode):
@@ -188,20 +220,18 @@ class KeyboardMouseInputLoop:
         Ki = self.status_dict[f"{modcode}_{opcode}_Ki"]
         Kd = self.status_dict[f"{modcode}_{opcode}_Kd"]
 
-        stepsize = Decimal(NovaConfig.TUNE_PID_STEPSIZE).quantize(self.THREEPLACES)
-
         if move == NovaMove.TUNE_PID_P_VALUE_UP:
-            Kp = Kp + stepsize
+            Kp = Kp + self.pid_tune_stepsize
         elif move == NovaMove.TUNE_PID_P_VALUE_DOWN:
-            Kp = Kp - stepsize
+            Kp = Kp - self.pid_tune_stepsize
         elif move == NovaMove.TUNE_PID_I_VALUE_UP:
-            Ki = Ki + stepsize
+            Ki = Ki + self.pid_tune_stepsize
         elif move == NovaMove.TUNE_PID_I_VALUE_DOWN:
-            Ki = Ki - stepsize
+            Ki = Ki - self.pid_tune_stepsize
         elif move == NovaMove.TUNE_PID_D_VALUE_UP:
-            Kd = Kd + stepsize
+            Kd = Kd + self.pid_tune_stepsize
         elif move == NovaMove.TUNE_PID_D_VALUE_DOWN:
-            Kd = Kd - stepsize
+            Kd = Kd - self.pid_tune_stepsize
 
         Kp_final, Ki_final, Kd_final = self.__sanitizeValues(Kp, Ki, Kd)
 
@@ -253,9 +283,9 @@ class KeyboardMouseInputLoop:
 
     def __determineMouseMode(self, flags):
         mode = ''
-        if flags & cv.EVENT_FLAG_LBUTTON:
+        if flags & cv.EVENT_FLAG_LBUTTON or flags & cv.EVENT_FLAG_CTRLKEY:
             mode = 'LBUTTON'
-        elif flags & cv.EVENT_FLAG_RBUTTON:
+        elif flags & cv.EVENT_FLAG_RBUTTON or flags & cv.EVENT_FLAG_SHIFTKEY:
             mode = 'RBUTTON'
         return mode
 
