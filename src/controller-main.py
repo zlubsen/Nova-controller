@@ -1,6 +1,7 @@
 import cv2 as cv
 from communication.serial_communication import SerialCommunication
 from communication.zmq_status_pub_communication import StatusPubCommunication
+from communication.zmq_apicommand_rep_communication import APICommandRepCommunication
 from controlloop.window_base import WindowBaseLoop
 from controlloop.external_input import ExternalInputControlLoop
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
@@ -14,10 +15,12 @@ def setupInputLoops():
 
     serial_comm = SerialCommunication()
     keyboard_mouse_input = KeyboardMouseInputLoop(serial_comm, status_dict)
+    api_comm = APICommandRepCommunication(uri=NovaConfig.COMPCOMM_COMMAND_URI)
 
     loops = []
     loops.append(serial_comm)
     loops.append(keyboard_mouse_input)
+    loops.append(api_comm)
     return loops
 
 def setupControlLoops():

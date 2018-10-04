@@ -14,22 +14,34 @@ class APICommandRepCommunication:
         self.poller = zmq.Poller()
         self.poller.register(self.server, zmq.POLLIN)
 
+    # TODO add nova config item for polling interval
+    # TODO revisit send/receive flags and poller to make more robust (cmds must be ack'd)
     def __listenForCommand(self):
-        api_cmd = None
-        socks = dict(self.poller.poll(500))
+        incoming_cmd = None
+        socks = dict(self.poller.poll(200))
         if socks.get(self.server) == zmq.POLLIN:
-            api_cmd = self.server.recv_pyobj()
+            try:
+                incoming_cmd = self.server.recv_pyobj()
+                self.server.send_pyobj(("Ack"), flags=zmq.NOBLOCK)
+            except zmq.error.ZMQError:
+                print("ZMQError occurred while receiving a command from Nova-REST.")
 
-        return api_cmd
+        return incoming_cmd
+
+    def commandAvailable(self):
+        return len(self.receivedCommands) > 0
 
     def readCommand(self):
         return self.receivedCommands.popleft()
 
-    def run(self, cmds):
+    def run(self):
         api_cmd = self.__listenForCommand()
 
         if not api_cmd == None:
+            print(f"received api-command: {api_cmd}")
             self.receivedCommands.append(api_cmd)
 
     def cleanup(self):
-        pass
+        self.server.close()
+        self.context.term()
+        self.poller.unregister()
