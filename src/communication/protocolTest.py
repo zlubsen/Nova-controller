@@ -67,7 +67,7 @@ class ProtocolBuilderTest(unittest.TestCase):
     def testSetMode(self):
         expected = ['0','0','1','1','3']
         builder = createCommand()
-        cmd = builder.setModule("nova").setAsset("module").setOperation("set_mode").setArgs(['3']).build()
+        cmd = builder.setModule("nova").setAsset("module").setOperation("set_mode").setModeArg("external_input").build()
         self.assertListEqual(cmd, expected)
 
     def testExternalInputMoveCommand(self):
