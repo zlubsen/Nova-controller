@@ -2,7 +2,7 @@ import unittest
 
 from protocol import *
 
-class ProtocolTest(unittest.TestCase):
+class ProtocolBuilderTest(unittest.TestCase):
 
     def testNoModuleProvided(self):
         builder = createCommand()
@@ -76,7 +76,7 @@ class ProtocolTest(unittest.TestCase):
         cmd = builder.setModule("external_input").setAsset("servo5").setOperation("set_degree").setArgs(['90']).build()
         self.assertListEqual(cmd, expected)
 
-    def testTrackObjectCoordinates(self):
+    def testTrackObjectSetCoordinates(self):
         args = ['90','90']
         expected = ['5','0','1','2','90','90']
 
@@ -84,6 +84,13 @@ class ProtocolTest(unittest.TestCase):
         cmd = builder.setModule("track_object").setAsset("module").setOperation("set_coordinates").setArgs(args).build()
         self.assertListEqual(cmd, expected)
 
+    def testSetPIDTuning(self):
+        args = ['500','400','0']
+        expected = ['4','1','3','3','500','400','0']
+
+        builder = createCommand()
+        cmd = builder.setModule("keep_distance").setAsset("pid").setOperation("set_tuning").setArgs(args).build()
+        self.assertListEqual(cmd, expected)
 
 if __name__ == "__main__":
     unittest.main()
