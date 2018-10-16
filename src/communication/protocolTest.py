@@ -92,5 +92,31 @@ class ProtocolBuilderTest(unittest.TestCase):
         cmd = builder.setModule("keep_distance").setAsset("pid").setOperation("set_tuning").setArgs(args).build()
         self.assertListEqual(cmd, expected)
 
+class ProtocolReaderTest(unittest.TestCase):
+
+    def testReadServoStatusCommand(self):
+        received = ['0','1','1','1','90']
+        expected = ['nova','servo1','get_degree',['90']]
+
+        reader = NovaProtocolCommandReader()
+        cmd = reader.readCommand(received)
+        self.assertListEqual(cmd, expected)
+
+    def testReadTrackObjectAckCommand(self):
+        received = ['5','0','2','0']
+        expected = ['track_object', 'module', 'ack_coordinates', []]
+
+        reader = NovaProtocolCommandReader()
+        cmd = reader.readCommand(received)
+        self.assertListEqual(cmd, expected)
+
+    def testGetPIDTuning(self):
+        received = ['4','1','4','3','500','400','0']
+        expected = ['keep_distance', 'pid', 'get_tuning', ['500','400','0']]
+
+        reader = NovaProtocolCommandReader()
+        cmd = reader.readCommand(received)
+        self.assertListEqual(cmd, expected)
+
 if __name__ == "__main__":
     unittest.main()

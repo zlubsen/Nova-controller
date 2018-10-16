@@ -162,3 +162,64 @@ class NovaProtocolCommandBuilder:
 
 def createCommand():
     return NovaProtocolCommandBuilder()
+
+class NovaProtocolCommandReader:
+    def __init__(self):
+        #self.__clearCommand()
+        self.__initLookupTree()
+
+    #def __clearCommand(self):
+    #    self.command = {
+    #        "module" : None,
+    #        "asset" : None,
+    #        "operation" : None,
+    #        "arguments" : []
+    #    }
+
+    def __initLookupTree(self):
+        self.lookup = {}
+        root = Root()
+        self.__traverseModules(root)
+
+    def __traverseModules(self, root):
+        for k,v in root.children.items():
+            if isinstance(v, ProtocolNode):
+                self.__traverseAssets(v, [v.code], [v.id])
+            else:
+                codes = [v.code,'0','0']
+                ids = [v.id,'','']
+                self.__addToLookup(codes, ids)
+
+    def __traverseAssets(self, node, code_parts, id_parts):
+        for k,v in node.children.items():
+            if isinstance(v, ProtocolNode):
+                codes = code_parts + [v.code]
+                ids = id_parts + [v.id]
+                self.__traverseOperations(v, codes, ids)
+            else:
+                codes = code_parts + ['0',v.code]
+                ids = id_parts + ['module',v.id]
+                self.__addToLookup(codes, ids)
+
+    def __traverseOperations(self, node, code_parts, id_parts):
+        for k,v in node.children.items():
+            if isinstance(v, ProtocolLeaf):
+                codes = code_parts + [v.code]
+                ids = id_parts + [v.id]
+                self.__addToLookup(codes, ids)
+
+    def __addToLookup(self, code_list, command_list):
+        key = ":".join(code_list)
+        self.lookup[key] = command_list
+
+    def readCommand(self, cmd_codes):
+        cmd = self.lookup[":".join(cmd_codes[:3])]
+
+        if int(cmd_codes[3]) > int(0):
+            args = cmd_codes[4:]
+        else:
+            args = []
+
+        cmd.append(args)
+
+        return cmd
