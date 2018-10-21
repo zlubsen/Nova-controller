@@ -20,8 +20,6 @@ class SerialCommunication:
         self.receivedBytes = []
         self.receivedCommands = deque()
 
-        #self.file = open("telemetry.txt", 'w', newline='\r\n') # open telemetry
-
     def __open(self):
         try:
             self.ser.open()
@@ -32,7 +30,6 @@ class SerialCommunication:
 
     def close(self):
         self.ser.close()
-        #self.file.close() # close telemetry
 
     def run(self):
         if self.connected:
@@ -84,24 +81,15 @@ class SerialCommunication:
             cmd = [CommandType.NOVA] + cmdFields
             self.newData = False
             self.receivedBytes.clear()
-    #        if cmdFields[0] == "99":
-    #            self.__storeTelemetry(cmdFields)
-    #        else:
             self.receivedCommands.append(tuple(cmd))
             self.__printIncomingCommand(cmd)
 
     def __printIncomingCommand(self, command):
-        #parts = list(command)
-        #parts[0] = str(parts[0])
         command[0] = str(command[0])
         print("[nova] " + ':'.join(command))
 
     def __printOutgoingCommand(self, command):
         print("[cntr] " + command)
-
-    #def __storeTelemetry(self, cmd):
-    #    self.file.write(",".join(list(cmd)) + "\n")
-    #    self.file.flush()
 
     def __determineSerialPort(self):
         if sys.platform.startswith('win32'):
