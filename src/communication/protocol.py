@@ -48,7 +48,6 @@ class PIDNode(ProtocolNode):
 class NovaNode(ProtocolNode):
     children = {
         "set_mode" : ProtocolLeaf("set_mode", '1'),
-        #"module" : ProtocolLeaf("module", '0'),
         "servo1" : ServoNode("servo1", '1'),
         "servo2" : ServoNode("servo2", '2'),
         "servo3" : ServoNode("servo3", '3'),
@@ -86,7 +85,6 @@ class TrackObjectNode(ProtocolNode):
     children = {
         "set_coordinates" : ProtocolLeaf("set_coordinates", '1'),
         "ack_coordinates" : ProtocolLeaf("ack_coordinates", '2'),
-        #"module" : ProtocolLeaf("module", '0'),
         "pid_x" : PIDNode("pid_x", '1'),
         "pid_y" : PIDNode("pid_y", '2')
     }
@@ -165,16 +163,7 @@ def createCommand():
 
 class NovaProtocolCommandReader:
     def __init__(self):
-        #self.__clearCommand()
         self.__initLookupTree()
-
-    #def __clearCommand(self):
-    #    self.command = {
-    #        "module" : None,
-    #        "asset" : None,
-    #        "operation" : None,
-    #        "arguments" : []
-    #    }
 
     def __initLookupTree(self):
         self.lookup = {}
