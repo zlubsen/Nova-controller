@@ -1,6 +1,6 @@
 import unittest
 
-from protocol import *
+from communication import *
 
 class ProtocolBuilderTest(unittest.TestCase):
 
