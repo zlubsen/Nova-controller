@@ -5,7 +5,7 @@ from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 from utils.frequencytimer import FrequencyTimer
-from protocol import NovaProtocolCommandReader
+from communication.protocol import NovaProtocolCommandReader
 
 class SerialCommunication:
     def __init__(self):
@@ -47,8 +47,9 @@ class SerialCommunication:
     def readCommand(self):
         return self.receivedCommands.popleft()
 
-    def writeCommand(cmd_list):
-        command = NovaConstants.CMD_TEMPLATE.format(*cmd_list)
+    def writeCommand(self, cmd_list_codes):
+        cmd_list_strings = [str(i) for i in cmd_list_codes]
+        command = NovaConstants.CMD_START_MARKER + NovaConstants.CMD_SEPARATOR.join(cmd_list_strings) + NovaConstants.CMD_END_MARKER
         if self.connected:
             try:
                 self.ser.write(command.encode())

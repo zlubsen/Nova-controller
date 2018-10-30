@@ -155,8 +155,10 @@ class KeyboardMouseInputLoop:
     def __processModeSelectionCommand(self, operation):
         new_mod_code = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
         if new_mod_code != self.status_dict["current_mode"]:
-            args = [new_mod_code,0,0]
-            cmd = (CommandType.INPUT, NovaConstants.MOD_STATUS_NOVA, NovaConstants.OP_STATUS_SEND_SET_MODE, args)
+            args = [new_mod_code]
+            cmd = createCommand().setModule("nova").setOperation("set_mode").setArgs(args).build()
+            #cmd = (CommandType.INPUT, NovaConstants.MOD_STATUS_NOVA, NovaConstants.OP_STATUS_SEND_SET_MODE, args)
+            # TODO now the commands are tuples; will proceed with lists
             self.move_commands.append(cmd)
             self.status_dict["current_mode"] = new_mod_code
 
