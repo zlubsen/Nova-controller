@@ -84,7 +84,7 @@ class SerialCommunication:
             cmd = [CommandType.NOVA] + self.protocolReader.readCommand(cmdFields)
             self.newData = False
             self.receivedBytes.clear()
-            self.receivedCommands.append(tuple(cmd))
+            self.receivedCommands.append(cmd)
             self.__printIncomingCommand(cmd)
 
     def __printIncomingCommand(self, command):

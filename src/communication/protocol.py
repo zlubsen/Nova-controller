@@ -1,3 +1,5 @@
+from utils.commandtype_enum import CommandType
+
 class ProtocolNode:
     def __init__(self, id, code):
         self.id = id
@@ -211,4 +213,16 @@ class NovaProtocolCommandReader:
 
         cmd.append(args)
 
+        return cmd
+
+class NovaCommand:
+    def __init__(self, type, module, asset, operation, args):
+        self.type = type
+        self.module = module
+        self.asset = asset
+        self.operation = operation
+        self.args = args
+
+    def toList(self):
+        cmd = [self.type, self.module, self.asset, self.operation] + self.args
         return cmd

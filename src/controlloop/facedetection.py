@@ -1,7 +1,7 @@
 import cv2 as cv
-from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
+from communication.protocol import *
 
 class FaceDetectionControlLoop:
     def __init__(self, serial_communication, status_dict):
@@ -57,18 +57,17 @@ class FaceDetectionControlLoop:
         x = int(center_x * NovaConfig.FACE_DETECTION_COORDINATE_CORRECTION_X)
         y = int(center_y * NovaConfig.FACE_DETECTION_COORDINATE_CORRECTION_Y)
 
-        modcode = NovaConstants.MOD_FACE_DETECTION
-        opcode = NovaConstants.OP_FACE_DETECTION_SET_COORDINATES
-        args = [x, y, 0]
+        cmd = createCommand().setModule("track_object").setOperation("set_coordinates").setArgs([x,y]).build()
 
-        self.serial_comm.writeCommand(modcode, opcode, args)
+        self.serial_comm.writeCommand(cmd)
         self.commands_send += 1
 
     def __processResponses(self, cmds):
         for cmd in cmds:
             if cmd[0] == CommandType.NOVA:
-                (type, modcode, opcode, arg1, arg2, arg3) = cmd
-                if modcode is NovaConstants.MOD_FACE_DETECTION and opcode is NovaConstants.OP_FACE_DETECTION_ACK_COORDINATES:
+                module = cmd[1]
+                operation = cmd[3]
+                if module is "track_object" and operation is "ack_coordinates":
                     self.commands_acked += 1
                     cmds.remove(cmd)
 
