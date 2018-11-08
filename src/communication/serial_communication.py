@@ -88,8 +88,8 @@ class SerialCommunication:
             self.__printIncomingCommand(cmd)
 
     def __printIncomingCommand(self, command):
-        command[0] = str(command[0])
-        print("[nova] " + ':'.join(command))
+        cmd_list = [str(command[0])] + command[1:4] + [x for x in command[4:][0]]
+        print("[nova] " + ':'.join(cmd_list))
 
     def __printOutgoingCommand(self, command):
         print("[cntr] " + command)
