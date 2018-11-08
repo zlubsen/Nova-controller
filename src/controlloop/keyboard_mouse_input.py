@@ -3,7 +3,6 @@ from collections import deque
 from enum import Enum
 from decimal import Decimal
 from communication.protocol import *
-from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 from utils.frequencytimer import FrequencyTimer

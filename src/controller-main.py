@@ -7,7 +7,6 @@ from controlloop.external_input import ExternalInputControlLoop
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
 from controlloop.facedetection import FaceDetectionControlLoop
 from config.config import NovaConfig
-from config.constants import NovaConstants
 
 def setupInputLoops():
     global serial_comm
