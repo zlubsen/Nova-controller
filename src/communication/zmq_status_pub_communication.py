@@ -40,9 +40,11 @@ class StatusPubCommunication:
     def __processStatusUpdates(self, cmds):
         for cmd in cmds:
             if cmd[0] == CommandType.NOVA:
-                (type, modcode, opcode, arg1, arg2, arg3) = cmd
-                if modcode is NovaConstants.MOD_STATUS_NOVA:
-                    self.__updateStatus(StatusPubCommunication.assetDict[opcode],(arg1,arg2,arg3))
+                #(type, modcode, opcode, arg1, arg2, arg3) = cmd
+                module, asset, operation, args = cmd[1], cmd[2], cmd[3], cmd[4:]
+                if module is "nova":
+                    #TODO: convert to new protocol from here
+                    #self.__updateStatus(StatusPubCommunication.assetDict[opcode],(arg1,arg2,arg3))
 
                     #TODO separate receiving status updates and sending them via MQ; status is also needed in the controller
                     if opcode in [NovaConstants.OP_STATUS_RECEIVE_DISTANCE_PID,
