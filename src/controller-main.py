@@ -27,7 +27,7 @@ def setupControlLoops():
     loops = []
     loops.append(ExternalInputControlLoop(serial_comm, status_dict))
     loops.append(FaceDetectionControlLoop(serial_comm, status_dict))
-    loops.append(StatusPubCommunication(status_dict, NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
+    #loops.append(StatusPubCommunication(status_dict, NovaConfig.COMPCOMM_STATUS_PUB_URI, NovaConfig.STATUS_PUBLISH_FREQUENCY_MS))
     return loops
 
 def setupStatusDict():
