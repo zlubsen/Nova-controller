@@ -2,6 +2,7 @@ import cv2 as cv
 from collections import deque
 from enum import Enum
 from decimal import Decimal
+from communication.protocol import *
 from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
@@ -37,31 +38,31 @@ class NovaMove(Enum):
     TUNE_PID_D_VALUE_DOWN = 27
 
 class KeyboardMouseInputLoop:
-    # dict that maps defined actions by id to (key_binding, mouse_binding, int_id, description, action) tuples
+    # dict that maps defined actions by id to (key_binding, mouse_binding, protocol_id, description, action) tuples
     actionDict = {
         NovaMove.QUIT_CONTROLLER : ('q', 'NONE', '', "Quit the controller", lambda self: self.__processQuitControllerCommand()),
         NovaMove.TOGGLE_WINDOW_FULL_SCREEN : ('c', 'NONE', '', "Toggle full screen", lambda self: self.__processToggleWindowFullScreenCommand()),
         NovaMove.TOGGLE_DISPLAY_CONTROLS : ('z', 'NONE', '', "Show/Hide controls on screen", lambda self: self.__processToggleDisplayControlsCommand()),
         NovaMove.TOGGLE_STATUS_DETAILS : ('x', 'NONE', '', "Show/Hide Nova status on screen", lambda self: self.__processToggleDisplayStatusDetailsCommand()),
 
-        NovaMove.SET_MODE_JOYSTICK_ABSOLUTE : ('1', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE, "Set mode to Joystick - absolute control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_ABSOLUTE)),
-        NovaMove.SET_MODE_JOYSTICK_RELATIVE : ('2', 'NONE', NovaConstants.MOD_JOYSTICK_CONTROL_RELATIVE, "Set mode to Joystick - relative control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_RELATIVE)),
-        NovaMove.SET_MODE_EXTERNAL_INPUT : ('3', 'NONE', NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, "Set mode to External input (keyboard, mouse, API)", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_EXTERNAL_INPUT)),
-        NovaMove.SET_MODE_DISTANCE_AVOIDANCE : ('4', 'NONE', NovaConstants.MOD_DISTANCE_AVOIDANCE, "Set mode to Distance Avoid", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_DISTANCE_AVOIDANCE)),
-        NovaMove.SET_MODE_FACE_DETECTION : ('5', 'NONE', NovaConstants.MOD_FACE_DETECTION, "Set mode to Face Detection", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_FACE_DETECTION)),
+        NovaMove.SET_MODE_JOYSTICK_ABSOLUTE : ('1', 'NONE', "joystick_absolute", "Set mode to Joystick - absolute control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_ABSOLUTE)),
+        NovaMove.SET_MODE_JOYSTICK_RELATIVE : ('2', 'NONE', "joystick_relative", "Set mode to Joystick - relative control", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_JOYSTICK_RELATIVE)),
+        NovaMove.SET_MODE_EXTERNAL_INPUT : ('3', 'NONE', "external_input", "Set mode to External input (keyboard, mouse, API)", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_EXTERNAL_INPUT)),
+        NovaMove.SET_MODE_DISTANCE_AVOIDANCE : ('4', 'NONE', "keep_distance", "Set mode to Distance Avoid", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_DISTANCE_AVOIDANCE)),
+        NovaMove.SET_MODE_FACE_DETECTION : ('5', 'NONE', "track_object", "Set mode to Face Detection", lambda self: self.__processModeSelectionCommand(NovaMove.SET_MODE_FACE_DETECTION)),
 
-        NovaMove.HEAD_MOVE_FRONT : ('e', 'MOUSE_SCROLL_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_FRONTBACK, "Head movement - forwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_FRONT, True)),
-        NovaMove.HEAD_MOVE_BACK : ('d', 'MOUSE_SCROLL_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_FRONTBACK, "Head movement - backwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_BACK, False)),
-        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_LBUTTON_Y_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_UPDOWN, "Body movement - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_UP, True)),
-        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_LBUTTON_Y_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_MOVE_UPDOWN, "Body movement - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_DOWN, False)),
+        NovaMove.HEAD_MOVE_FRONT : ('e', 'MOUSE_SCROLL_PLUS', "servo1", "Head movement - forwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_FRONT, True)),
+        NovaMove.HEAD_MOVE_BACK : ('d', 'MOUSE_SCROLL_MINUS', "servo1", "Head movement - backwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_BACK, False)),
+        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_LBUTTON_Y_PLUS', "servo5", "Head movement - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_UP, True)),
+        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_LBUTTON_Y_MINUS', "servo5", "Head movement - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_DOWN, False)),
 
-        NovaMove.BODY_MOVE_RIGHT : ('f', 'MOUSE_LBUTTON_X_MINUS', NovaConstants.OP_EXTERNAL_INPUT_BODY_MOVE_RIGHTLEFT, "Body movement - right", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_RIGHT, True)),
-        NovaMove.BODY_MOVE_LEFT : ('s', 'MOUSE_LBUTTON_X_PLUS', NovaConstants.OP_EXTERNAL_INPUT_BODY_MOVE_RIGHTLEFT, "Body movement - left", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_LEFT, False)),
+        NovaMove.BODY_MOVE_RIGHT : ('f', 'MOUSE_LBUTTON_X_MINUS', "servo4", "Body movement - right", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_RIGHT, True)),
+        NovaMove.BODY_MOVE_LEFT : ('s', 'MOUSE_LBUTTON_X_PLUS', "servo4", "Body movement - left", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_LEFT, False)),
 
-        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_RBUTTON_Y_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_UPDOWN, "Head rotation - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_UP, True)),
-        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_RBUTTON_Y_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_UPDOWN, "Head rotation - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_DOWN, False)),
-        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_RBUTTON_X_PLUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFTRIGHT, "Head rotation - left", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_LEFT, True)),
-        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', NovaConstants.OP_EXTERNAL_INPUT_HEAD_ROTATE_LEFTRIGHT, "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT, False)),
+        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_RBUTTON_Y_PLUS', "servo3", "Head rotation - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_UP, True)),
+        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_RBUTTON_Y_MINUS', "servo3", "Head rotation - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_DOWN, False)),
+        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_RBUTTON_X_PLUS', "servo2", "Head rotation - left", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_LEFT, True)),
+        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', "servo2", "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT, False)),
 
         NovaMove.TUNE_PID_P_VALUE_UP : ('p', 'NONE', None, "Tune PID - increase Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_UP)),
         NovaMove.TUNE_PID_P_VALUE_DOWN : (';', 'NONE', None, "Tune PID - decrease Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_DOWN)),
@@ -153,72 +154,70 @@ class KeyboardMouseInputLoop:
             cv.setWindowProperty(NovaConfig.NOVA_WINDOW_NAME, cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     def __processModeSelectionCommand(self, operation):
-        new_mod_code = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
-        if new_mod_code != self.status_dict["current_mode"]:
-            args = [new_mod_code,0,0]
-            cmd = (CommandType.INPUT, NovaConstants.MOD_STATUS_NOVA, NovaConstants.OP_STATUS_SEND_SET_MODE, args)
+        new_module = self.actionDict[operation][self.ACTION_OPERATION_ID_INDEX]
+        if new_module != self.status_dict["current_mode"]:
+            cmd = [CommandType.INPUT] + createCommand().setModule("nova").setOperation("set_mode").setModeArg(new_module).build()
             self.move_commands.append(cmd)
-            self.status_dict["current_mode"] = new_mod_code
+            self.status_dict["current_mode"] = new_module
 
     def __processMoveCommand(self, move, positive_direction):
         degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if positive_direction else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
 
-        opcode = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
-        args = [degrees, 0, 0]
-        cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, opcode, args)
+        asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
+        args = [degrees]
+        cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
         self.move_commands.append(cmd)
 
     def __processTunePIDCommand(self, move):
-        modcode = self.status_dict["current_mode"]
+        module = self.status_dict["current_mode"]
         if move == NovaMove.TUNE_CYCLE_PID_CONTROLLER_IN_MODULE:
-            self.__togglePIDcontrollerToTune(modcode)
+            self.__togglePIDcontrollerToTune(module)
         elif move == NovaMove.TOGGLE_PID_MANUAL_AUTO:
-            self.__togglePIDcontrollerOnOff(modcode)
+            self.__togglePIDcontrollerOnOff(module)
         else:
-            opcode = self.__determinePIDopcode(modcode)
-            pid_values = self.__determinePIDvalues(move, modcode, opcode)
+            asset = self.__determinePIDasset(module)
+            pid_values = self.__determinePIDvalues(move, module, asset)
             args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
-            cmd = (CommandType.INPUT, modcode, opcode, args)
+            cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("set_tuning").setArgs(args).build()
             self.move_commands.append(cmd)
 
-    def __togglePIDcontrollerToTune(self, modcode):
-        opcode = self.__determinePIDopcode(modcode)
+    def __togglePIDcontrollerToTune(self, module):
+        asset = self.__determinePIDasset(module)
 
-        if modcode == NovaConstants.MOD_FACE_DETECTION:
-            opcode = NovaConstants.OP_FACE_DETECTION_SET_Y_PID_TUNING if opcode == NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING else NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
-            self.__setCurrentPIDopcode(modcode, opcode)
+        if module == "track_object":
+            asset = "pid_y" if asset == "pid_x" else "pid_x"
+            self.__setCurrentPIDasset(module, asset)
 
-        print(f"[ctrl] Now tuning PID {opcode} for module {modcode}")
+        print(f"[ctrl] Now tuning PID {asset} for module {module}")
 
-    def __togglePIDcontrollerOnOff(self, modcode):
-        opcode = self.__determinePIDopcode(modcode)
-        print(f"Toggle PID controller {opcode} for mod {modcode} auto/manual not implemented")
-        #args = [opcode,0,0]
-        #cmd = (CommandType.INPUT, modcode, opcode, args)
-        #self.move_commands.append(cmd)
+    def __togglePIDcontrollerOnOff(self, module):
+        asset = self.__determinePIDasset(module)
+        print(f"Toggled PID controller {asset} for module {module} auto/manual")
+        cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("toggle_auto").build()
+        self.move_commands.append(cmd)
 
-    def __determinePIDopcode(self, modcode):
-        if modcode == NovaConstants.MOD_DISTANCE_AVOIDANCE:
-            opcode = NovaConstants.OP_DISTANCE_SET_PID_TUNING
-        if modcode == NovaConstants.MOD_FACE_DETECTION:
-            key = f"current_pid_controller_opcode_{modcode}"
+    def __determinePIDasset(self, module):
+        if module == "keep_distance":
+            asset = "pid"
+        if module == "track_object":
+            key = f"current_pid_controller_asset_{module}"
             if key in self.status_dict:
-                opcode = self.status_dict[key]
+                asset = self.status_dict[key]
             else:
-                opcode = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING # default controller to tune is X-axis
-                self.__setCurrentPIDopcode(modcode, opcode)
+                asset = "pid_x" # default controller to tune is X-axis
+                self.__setCurrentPIDasset(module, asset)
 
-        return opcode
+        return asset
 
-    def __setCurrentPIDopcode(self, modcode, opcode):
-        key = f"current_pid_controller_opcode_{modcode}"
-        self.status_dict[key] = opcode
+    def __setCurrentPIDasset(self, module, asset):
+        key = f"current_pid_controller_asset_{module}"
+        self.status_dict[key] = asset
 
     # TODO can we make this one more neat?
-    def __determinePIDvalues(self, move, modcode, opcode):
-        Kp = self.status_dict[f"{modcode}_{opcode}_Kp"]
-        Ki = self.status_dict[f"{modcode}_{opcode}_Ki"]
-        Kd = self.status_dict[f"{modcode}_{opcode}_Kd"]
+    def __determinePIDvalues(self, move, module, asset):
+        Kp = self.status_dict[f"{module}_{asset}_Kp"]
+        Ki = self.status_dict[f"{module}_{asset}_Ki"]
+        Kd = self.status_dict[f"{module}_{asset}_Kd"]
 
         if move == NovaMove.TUNE_PID_P_VALUE_UP:
             Kp = Kp + self.pid_tune_stepsize
@@ -235,9 +234,9 @@ class KeyboardMouseInputLoop:
 
         Kp_final, Ki_final, Kd_final = self.__sanitizeValues(Kp, Ki, Kd)
 
-        self.status_dict[f"{modcode}_{opcode}_Kp"] = Kp_final
-        self.status_dict[f"{modcode}_{opcode}_Ki"] = Ki_final
-        self.status_dict[f"{modcode}_{opcode}_Kd"] = Kd_final
+        self.status_dict[f"{module}_{asset}_Kp"] = Kp_final
+        self.status_dict[f"{module}_{asset}_Ki"] = Ki_final
+        self.status_dict[f"{module}_{asset}_Kd"] = Kd_final
 
         return (Kp_final, Ki_final, Kd_final)
 
@@ -302,9 +301,9 @@ class KeyboardMouseInputLoop:
         mouse_event_id = '_'.join(parts_of_id)
         move = self.mouse_index[mouse_event_id]
 
-        opcode = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
-        args = [degrees, 0, 0]
-        cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, opcode, args)
+        asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
+        args = [degrees]
+        cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
         self.move_commands.append(cmd)
 
     def __calculateMouseWheelMove(self, flags):
@@ -315,8 +314,9 @@ class KeyboardMouseInputLoop:
 
         degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
         move = self.mouse_index['MOUSE_SCROLL_' + direction]
-        args = [degrees, 0, 0]
-        cmd = (CommandType.INPUT, NovaConstants.MOD_EXTERNAL_INPUT_CONTROL, self.actionDict[move][self.ACTION_OPERATION_ID_INDEX], args)
+        asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
+        args = [degrees]
+        cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
         self.move_commands.append(cmd)
 
     # TODO lots of config items to put in NovaConfig here

@@ -33,7 +33,7 @@ def setupControlLoops():
 def setupStatusDict():
     statusdict = {}
     statusdict["current_mode"] = NovaConfig.STARTUP_MODE
-    statusdict[f"current_pid_controller_opcode_{NovaConstants.MOD_FACE_DETECTION}"] = NovaConstants.OP_FACE_DETECTION_SET_X_PID_TUNING
+    statusdict[f"current_pid_controller_asset_track_object"] = "pid_x"
 
     return statusdict
 

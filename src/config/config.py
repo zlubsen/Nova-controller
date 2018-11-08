@@ -35,7 +35,7 @@ class NovaConfig(Const):
     NOVA_CAMERA_CAPTURE_SIZE_X = 640
     NOVA_CAMERA_CAPTURE_SIZE_Y = 480
 
-    STARTUP_MODE = NovaConstants.MOD_JOYSTICK_CONTROL_ABOLUTE
+    STARTUP_MODE = "joystick_absolute"
 
     TUNE_PID_STEPSIZE = 0.005
 

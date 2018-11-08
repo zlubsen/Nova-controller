@@ -5,6 +5,7 @@ from config.constants import NovaConstants
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 from utils.frequencytimer import FrequencyTimer
+from communication.protocol import NovaProtocolCommandReader
 
 class SerialCommunication:
     def __init__(self):
@@ -19,6 +20,8 @@ class SerialCommunication:
         self.newData = False
         self.receivedBytes = []
         self.receivedCommands = deque()
+
+        self.protocolReader = NovaProtocolCommandReader()
 
     def __open(self):
         try:
@@ -44,16 +47,16 @@ class SerialCommunication:
     def readCommand(self):
         return self.receivedCommands.popleft()
 
-    def writeCommand(self, modcode, opcode, args):
-            cmd_content = [modcode, opcode] + args
-            command = NovaConstants.CMD_TEMPLATE.format(*cmd_content)
-            if self.connected:
-                try:
-                    self.ser.write(command.encode())
-                    self.__printOutgoingCommand(command)
-                except serial.serialutil.SerialException:
-                    self.connected = False
-                    print("[ctrl] SerialException while writing to Nova.")
+    def writeCommand(self, cmd_list_codes):
+        cmd_list_strings = [str(i) for i in cmd_list_codes]
+        command = NovaConstants.CMD_START_MARKER + NovaConstants.CMD_SEPARATOR.join(cmd_list_strings) + NovaConstants.CMD_END_MARKER
+        if self.connected:
+            try:
+                self.ser.write(command.encode())
+                self.__printOutgoingCommand(command)
+            except serial.serialutil.SerialException:
+                self.connected = False
+                print("[ctrl] SerialException while writing to Nova.")
 
     def __recvBytesWithStartEndMarkers(self):
         try:
@@ -78,10 +81,10 @@ class SerialCommunication:
     def __parseInput(self):
         if self.newData:
             cmdFields = ''.join([byte.decode() for byte in self.receivedBytes]).split(NovaConstants.CMD_SEPARATOR)
-            cmd = [CommandType.NOVA] + cmdFields
+            cmd = [CommandType.NOVA] + self.protocolReader.readCommand(cmdFields)
             self.newData = False
             self.receivedBytes.clear()
-            self.receivedCommands.append(tuple(cmd))
+            self.receivedCommands.append(cmd)
             self.__printIncomingCommand(cmd)
 
     def __printIncomingCommand(self, command):
