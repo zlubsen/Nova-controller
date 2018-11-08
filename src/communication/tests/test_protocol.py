@@ -127,5 +127,8 @@ class ProtocolUtilTest(unittest.TestCase):
         }
         found = mapPIDNodes()
 
+        self.fail()
+        #self.assertTrue(expected == found)
+
 if __name__ == "__main__":
     unittest.main()
