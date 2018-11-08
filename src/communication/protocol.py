@@ -163,6 +163,27 @@ class NovaProtocolCommandBuilder:
 def createCommand():
     return NovaProtocolCommandBuilder()
 
+def mapPIDNodes():
+    pid_map = {}
+    protocol_tree = NovaProtocolCommandBuilder().root
+    for k,v in protocol_tree.children.items():
+        pid_list = __findPIDNodes(v)
+        if len(pid_list) > 0:
+            pid_map[k] = pid_list
+
+    return pid_map
+
+def __findPIDNodes(node):
+    found_pids = []
+    if not isinstance(node, ProtocolLeaf):
+        for k,v in node.children.items():
+            if isinstance(v, PIDNode):
+                found_pids.append(k)
+            else:
+                found_pids += __findPIDNodes(v)
+
+    return found_pids
+
 class NovaProtocolCommandReader:
     def __init__(self):
         self.__initLookupTree()

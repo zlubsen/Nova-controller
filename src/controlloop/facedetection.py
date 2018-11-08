@@ -1,7 +1,7 @@
 import cv2 as cv
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
-from communication.protocol import *
+from communication.protocol import createCommand, NovaProtocolCommandBuilder
 
 class FaceDetectionControlLoop:
     def __init__(self, serial_communication, status_dict):

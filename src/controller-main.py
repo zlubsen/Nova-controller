@@ -32,7 +32,6 @@ def setupControlLoops():
 def setupStatusDict():
     statusdict = {}
     statusdict["current_mode"] = NovaConfig.STARTUP_MODE
-    statusdict[f"current_pid_controller_asset_track_object"] = "pid_x"
 
     return statusdict
 

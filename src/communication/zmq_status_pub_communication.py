@@ -8,8 +8,8 @@ class StatusPubCommunication:
     # index ids must match the codes in the Nova-platform constants
     # TODO SET_MODE constant is now somewhere in the middel ('9'), which is ugly
     assetDict = {
-        NovaConstants.OP_STATUS_RECEIVE_SERVO_1:"servo1",
-        NovaConstants.OP_STATUS_RECEIVE_SERVO_2:"servo2",
+        '1':"servo1",
+        '2':"servo2",
         '3':"servo3",
         '4':"servo4",
         '5':"servo5",
