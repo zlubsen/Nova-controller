@@ -1,6 +1,6 @@
 import unittest
 
-from communication import *
+from protocol import *
 
 class ProtocolBuilderTest(unittest.TestCase):
 
@@ -117,6 +117,18 @@ class ProtocolReaderTest(unittest.TestCase):
         reader = NovaProtocolCommandReader()
         cmd = reader.readCommand(received)
         self.assertListEqual(cmd, expected)
+
+class ProtocolUtilTest(unittest.TestCase):
+
+    def testListPIDNodes(self):
+        expected = {
+            "keep_distance" : ["pid"],
+            "track_object" : ["pid_x", "pid_y"]
+        }
+        found = mapPIDNodes()
+
+        self.fail()
+        #self.assertTrue(expected == found)
 
 if __name__ == "__main__":
     unittest.main()

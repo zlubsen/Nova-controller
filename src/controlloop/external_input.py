@@ -1,4 +1,3 @@
-from config.constants import NovaConstants
 from utils.commandtype_enum import CommandType
 
 class ExternalInputControlLoop():

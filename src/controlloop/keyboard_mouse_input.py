@@ -2,8 +2,8 @@ import cv2 as cv
 from collections import deque
 from enum import Enum
 from decimal import Decimal
-from communication.protocol import *
-from config.constants import NovaConstants
+from communication.protocol import mapPIDNodes
+from communication.protocol import createCommand
 from config.config import NovaConfig
 from utils.commandtype_enum import CommandType
 from utils.frequencytimer import FrequencyTimer
@@ -88,6 +88,7 @@ class KeyboardMouseInputLoop:
         self.status_dict = status_dict
 
         self.__buildInputIndexes()
+        self.__buildPIDIndex()
 
         self.running = True
         self.move_commands = deque()
@@ -111,6 +112,11 @@ class KeyboardMouseInputLoop:
     def __buildMouseIndex(self):
         mouse_index = {}
 
+    def __buildPIDIndex(self):
+        self.pid_index = mapPIDNodes()
+        for k,v in self.pid_index.items():
+            self.__setCurrentPIDindex(k,0)
+
     def __setupMouseControl(self):
         self.mouse_move_on = False
         cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
@@ -124,8 +130,8 @@ class KeyboardMouseInputLoop:
     def __buildHelpTextForKeys(self):
         help_text_keys = []
         for id, items in self.actionDict.items():
-            key = items[0]
-            text = items[3]
+            key = items[ACTION_KEY_INDEX]
+            text = items[ACTION_DESCRIPTION_INDEX]
             help_text_keys.append(f"{key} : {text}")
 
         return help_text_keys
@@ -174,44 +180,43 @@ class KeyboardMouseInputLoop:
             self.__togglePIDcontrollerToTune(module)
         elif move == NovaMove.TOGGLE_PID_MANUAL_AUTO:
             self.__togglePIDcontrollerOnOff(module)
-        else:
+        else: # actual tuning of pid settings (up | down)
             asset = self.__determinePIDasset(module)
             pid_values = self.__determinePIDvalues(move, module, asset)
-            args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
+            args = list( int( x * 1000 ) for x in pid_values ) # nova command protocol allows only to send 'int', not 'decimal'
             cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("set_tuning").setArgs(args).build()
             self.move_commands.append(cmd)
 
     def __togglePIDcontrollerToTune(self, module):
-        asset = self.__determinePIDasset(module)
-
-        if module == "track_object":
-            asset = "pid_y" if asset == "pid_x" else "pid_x"
-            self.__setCurrentPIDasset(module, asset)
-
-        print(f"[ctrl] Now tuning PID {asset} for module {module}")
+        if module in self.pid_index:
+            current_index = self.__getCurrentPIDindex(module)
+            no_of_module_pids = len(self.pid_index[module])
+            new_index = current_index+1
+            if new_index >= no_of_module_pids:
+                new_index = 0
+            self.__setCurrentPIDindex(module, new_index)
+            asset = self.__determinePIDasset(module)
+            print(f"[ctrl] Now tuning PID {asset} for module {module}")
 
     def __togglePIDcontrollerOnOff(self, module):
-        asset = self.__determinePIDasset(module)
-        print(f"Toggled PID controller {asset} for module {module} auto/manual")
-        cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("toggle_auto").build()
-        self.move_commands.append(cmd)
+        if module in self.pid_index:
+            asset = self.__determinePIDasset(module)
+            print(f"Toggled PID controller {asset} for module {module} auto/manual")
+            cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("toggle_auto").build()
+            self.move_commands.append(cmd)
 
     def __determinePIDasset(self, module):
-        if module == "keep_distance":
-            asset = "pid"
-        if module == "track_object":
-            key = f"current_pid_controller_asset_{module}"
-            if key in self.status_dict:
-                asset = self.status_dict[key]
-            else:
-                asset = "pid_x" # default controller to tune is X-axis
-                self.__setCurrentPIDasset(module, asset)
+        index = self.__getCurrentPIDindex(module)
+        assets = self.pid_index[module]
+        return assets[index]
 
-        return asset
+    def __getCurrentPIDindex(self, module):
+        key = f"current_pid_controller_index_{module}"
+        return self.status_dict[key]
 
-    def __setCurrentPIDasset(self, module, asset):
-        key = f"current_pid_controller_asset_{module}"
-        self.status_dict[key] = asset
+    def __setCurrentPIDindex(self, module, index):
+        key = f"current_pid_controller_index_{module}"
+        self.status_dict[key] = index
 
     # TODO can we make this one more neat?
     def __determinePIDvalues(self, move, module, asset):

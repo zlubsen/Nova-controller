@@ -1,5 +1,3 @@
-from config.constants import NovaConstants
-
 class MetaConst(type):
     def __getattr__(cls, key):
         return cls[key]

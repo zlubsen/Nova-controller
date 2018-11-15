@@ -7,7 +7,6 @@ from controlloop.external_input import ExternalInputControlLoop
 from controlloop.keyboard_mouse_input import KeyboardMouseInputLoop
 from controlloop.facedetection import FaceDetectionControlLoop
 from config.config import NovaConfig
-from config.constants import NovaConstants
 
 def setupInputLoops():
     global serial_comm
@@ -33,7 +32,6 @@ def setupControlLoops():
 def setupStatusDict():
     statusdict = {}
     statusdict["current_mode"] = NovaConfig.STARTUP_MODE
-    statusdict[f"current_pid_controller_asset_track_object"] = "pid_x"
 
     return statusdict
 
