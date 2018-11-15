@@ -130,8 +130,8 @@ class KeyboardMouseInputLoop:
     def __buildHelpTextForKeys(self):
         help_text_keys = []
         for id, items in self.actionDict.items():
-            key = items[0]
-            text = items[3]
+            key = items[ACTION_KEY_INDEX]
+            text = items[ACTION_DESCRIPTION_INDEX]
             help_text_keys.append(f"{key} : {text}")
 
         return help_text_keys
@@ -183,7 +183,7 @@ class KeyboardMouseInputLoop:
         else: # actual tuning of pid settings (up | down)
             asset = self.__determinePIDasset(module)
             pid_values = self.__determinePIDvalues(move, module, asset)
-            args = list(int(x*1000) for x in pid_values) # nova command protocol allows only to send INTs
+            args = list( int( x * 1000 ) for x in pid_values ) # nova command protocol allows only to send 'int', not 'decimal'
             cmd = [CommandType.INPUT] + createCommand().setModule(module).setAsset(asset).setOperation("set_tuning").setArgs(args).build()
             self.move_commands.append(cmd)
 
