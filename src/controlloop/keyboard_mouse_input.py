@@ -304,7 +304,6 @@ class KeyboardMouseInputLoop:
         asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
         args = [degrees]
         cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
-        print(cmd)
         self.move_commands.append(cmd)
 
     def __calculateMouseWheelMove(self, flags):
@@ -318,7 +317,6 @@ class KeyboardMouseInputLoop:
         asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
         args = [degrees]
         cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
-        print(cmd)
         self.move_commands.append(cmd)
 
     # TODO lots of config items to put in NovaConfig here
