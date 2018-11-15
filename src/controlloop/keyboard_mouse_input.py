@@ -53,16 +53,16 @@ class KeyboardMouseInputLoop:
 
         NovaMove.HEAD_MOVE_FRONT : ('e', 'MOUSE_SCROLL_PLUS', "servo1", "Head movement - forwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_FRONT, True)),
         NovaMove.HEAD_MOVE_BACK : ('d', 'MOUSE_SCROLL_MINUS', "servo1", "Head movement - backwards", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_BACK, False)),
-        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_LBUTTON_Y_PLUS', "servo5", "Head movement - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_UP, True)),
-        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_LBUTTON_Y_MINUS', "servo5", "Head movement - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_DOWN, False)),
+        NovaMove.HEAD_MOVE_UP : ('g', 'MOUSE_MODE1_Y_PLUS', "servo5", "Head movement - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_UP, True)),
+        NovaMove.HEAD_MOVE_DOWN : ('h', 'MOUSE_MODE1_Y_MINUS', "servo5", "Head movement - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_MOVE_DOWN, False)),
 
-        NovaMove.BODY_MOVE_RIGHT : ('f', 'MOUSE_LBUTTON_X_MINUS', "servo4", "Body movement - right", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_RIGHT, True)),
-        NovaMove.BODY_MOVE_LEFT : ('s', 'MOUSE_LBUTTON_X_PLUS', "servo4", "Body movement - left", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_LEFT, False)),
+        NovaMove.BODY_MOVE_RIGHT : ('f', 'MOUSE_MODE1_X_MINUS', "servo4", "Body movement - right", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_RIGHT, True)),
+        NovaMove.BODY_MOVE_LEFT : ('s', 'MOUSE_MODE1_X_PLUS', "servo4", "Body movement - left", lambda self: self.__processMoveCommand(NovaMove.BODY_MOVE_LEFT, False)),
 
-        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_RBUTTON_Y_PLUS', "servo3", "Head rotation - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_UP, True)),
-        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_RBUTTON_Y_MINUS', "servo3", "Head rotation - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_DOWN, False)),
-        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_RBUTTON_X_PLUS', "servo2", "Head rotation - left", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_LEFT, True)),
-        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_RBUTTON_X_MINUS', "servo2", "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT, False)),
+        NovaMove.HEAD_ROTATE_UP : ('i', 'MOUSE_MODE2_Y_PLUS', "servo3", "Head rotation - up", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_UP, True)),
+        NovaMove.HEAD_ROTATE_DOWN : ('k', 'MOUSE_MODE2_Y_MINUS', "servo3", "Head rotation - down", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_DOWN, False)),
+        NovaMove.HEAD_ROTATE_LEFT : ('j', 'MOUSE_MODE2_X_PLUS', "servo2", "Head rotation - left", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_LEFT, True)),
+        NovaMove.HEAD_ROTATE_RIGHT : ('l', 'MOUSE_MODE2_X_MINUS', "servo2", "Head rotation - right", lambda self: self.__processMoveCommand(NovaMove.HEAD_ROTATE_RIGHT, False)),
 
         NovaMove.TUNE_PID_P_VALUE_UP : ('p', 'NONE', None, "Tune PID - increase Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_UP)),
         NovaMove.TUNE_PID_P_VALUE_DOWN : (';', 'NONE', None, "Tune PID - decrease Kp", lambda self: self.__processTunePIDCommand(NovaMove.TUNE_PID_P_VALUE_DOWN)),
@@ -118,7 +118,8 @@ class KeyboardMouseInputLoop:
             self.__setCurrentPIDindex(k,0)
 
     def __setupMouseControl(self):
-        self.mouse_move_on = False
+        self.mouse_prev_x = 0
+        self.mouse_prev_y = 0
         cv.setMouseCallback(NovaConfig.NOVA_WINDOW_NAME, self.__onMouse)
         self.mouse_timer = FrequencyTimer(NovaConfig.EXTERNAL_INPUT_MOUSE_FREQUENCY_MS)
 
@@ -130,8 +131,8 @@ class KeyboardMouseInputLoop:
     def __buildHelpTextForKeys(self):
         help_text_keys = []
         for id, items in self.actionDict.items():
-            key = items[ACTION_KEY_INDEX]
-            text = items[ACTION_DESCRIPTION_INDEX]
+            key = items[self.ACTION_KEY_INDEX]
+            text = items[self.ACTION_DESCRIPTION_INDEX]
             help_text_keys.append(f"{key} : {text}")
 
         return help_text_keys
@@ -256,41 +257,35 @@ class KeyboardMouseInputLoop:
         return (Decimal(Kp).quantize(self.THREEPLACES), Decimal(Ki).quantize(self.THREEPLACES), Decimal(Kd).quantize(self.THREEPLACES))
 
     def __onMouse(self, event, x, y, flags, param):
-        if event == cv.EVENT_RBUTTONDOWN or event == cv.EVENT_LBUTTONDOWN:
-            self.prev_x = x
-            self.prev_y = y
-            self.mouse_move_on = True
-        elif event == cv.EVENT_RBUTTONUP or event == cv.EVENT_LBUTTONUP:
-            self.mouse_move_on = False
-
         if self.mouse_timer.frequencyElapsed(): # trim down the amount of events converted into commands
             if event == cv.EVENT_MOUSEWHEEL:
                 self.__calculateMouseWheelMove(flags)
-            elif self.mouse_move_on and event == cv.EVENT_MOUSEMOVE:
+            elif event == cv.EVENT_MOUSEMOVE:
                 self.__calculateMouseMove(x,y,flags)
-                self.prev_x = x
-                self.prev_y = y
+                self.mouse_prev_x = x
+                self.mouse_prev_y = y
 
     def __calculateMouseMove(self, x, y, flags):
         mouse_mode = self.__determineMouseMode(flags)
-        direction_x = self.__determineMouseDirection(x, self.prev_x)
-        direction_y = self.__determineMouseDirection(y, self.prev_y)
+        direction_x = self.__determineMouseDirection(x, self.mouse_prev_x)
+        direction_y = self.__determineMouseDirection(y, self.mouse_prev_y)
 
         # TODO set degrees depending on the delta of X or Y axis (perhaps using multiples of stepsize)
-        if not direction_x == '':
-            degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_x == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
-            self.__createCommandFromMouseMove(mouse_mode, 'X', direction_x, degrees)
+        if not mouse_mode == '':
+            if not direction_x == '':
+                degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_x == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
+                self.__createCommandFromMouseMove(mouse_mode, 'X', direction_x, degrees)
 
-        if not direction_y == '':
-            degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_y == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
-            self.__createCommandFromMouseMove(mouse_mode, 'Y', direction_y, degrees)
+            if not direction_y == '':
+                degrees = NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES if direction_y == 'PLUS' else -NovaConfig.EXTERNAL_INPUT_STEPSIZE_DEGREES
+                self.__createCommandFromMouseMove(mouse_mode, 'Y', direction_y, degrees)
 
     def __determineMouseMode(self, flags):
         mode = ''
-        if flags & cv.EVENT_FLAG_LBUTTON or flags & cv.EVENT_FLAG_CTRLKEY:
-            mode = 'LBUTTON'
-        elif flags & cv.EVENT_FLAG_RBUTTON or flags & cv.EVENT_FLAG_SHIFTKEY:
-            mode = 'RBUTTON'
+        if flags & cv.EVENT_FLAG_CTRLKEY:
+            mode = 'MODE1'
+        elif flags & cv.EVENT_FLAG_SHIFTKEY:
+            mode = 'MODE2'
         return mode
 
     def __determineMouseDirection(self, current, previous):
@@ -309,6 +304,7 @@ class KeyboardMouseInputLoop:
         asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
         args = [degrees]
         cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
+        print(cmd)
         self.move_commands.append(cmd)
 
     def __calculateMouseWheelMove(self, flags):
@@ -322,6 +318,7 @@ class KeyboardMouseInputLoop:
         asset = self.actionDict[move][self.ACTION_OPERATION_ID_INDEX]
         args = [degrees]
         cmd = [CommandType.INPUT] + createCommand().setModule("external_input").setAsset(asset).setOperation("set_degree_steps").setArgs(args).build()
+        print(cmd)
         self.move_commands.append(cmd)
 
     # TODO lots of config items to put in NovaConfig here
